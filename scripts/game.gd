@@ -23,8 +23,10 @@ const LEVELS := [
 		"goal": "Survey the route in order — then get back to camp before dark."},
 	{"id": "level2_beacons", "title": "II. The Drowned Chart", "scene": "res://levels/level2/level2.tscn",
 		"goal": "Light the three beacons, then dock at the island. Don't linger."},
-	{"id": "level3_keys", "title": "III. Waking", "scene": "res://levels/level3/level3.tscn",
-		"goal": "Find the three keys. Find the Door of Light."},
+	{"id": "cave_hollow", "title": "III. The Hollow", "scene": "res://levels/cave/cave.tscn",
+		"goal": "Go down into the dark. Find the door the painters found.", "finds": "cave paintings"},
+	{"id": "level3_keys", "title": "IV. Waking", "scene": "res://levels/level3/level3.tscn",
+		"goal": "Find the three keys. Find the Door of Light.", "finds": "torn pages"},
 ]
 
 ## Set by the finale before it shows the ending scene: "escape" or "caught".

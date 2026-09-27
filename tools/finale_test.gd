@@ -122,7 +122,9 @@ func _take(name: String) -> void:
 func _run() -> void:
 	game = root.get_node("Game")
 	game.show_timer = true
-	game.current_level = 2
+	for i in game.LEVELS.size():
+		if game.LEVELS[i]["id"] == "level3_keys":
+			game.current_level = i
 	change_scene_to_file("res://levels/level3/level3.tscn")
 	await _secs(2.0)
 	level = current_scene

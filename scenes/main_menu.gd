@@ -98,7 +98,7 @@ func _build_chapters() -> void:
 		var marks := ""
 		if open and best >= 0.0:
 			var id: String = Game.LEVELS[i]["id"]
-			var what: String = ["survey markers", "lost ships", "torn pages"][mini(i, 2)]
+			var what: String = Game.LEVELS[i].get("finds", ["survey markers", "lost ships", "torn pages"][mini(i, 2)])
 			marks = "%s %d/%d" % [what, Game.get_landmarks(id), Game.get_landmarks_total(id)]
 		t.text = (("best  " + Game.format_time(best) + "   ") if (open and best >= 0.0 and Game.show_timer) else "") + marks
 		t.add_theme_font_override("font", _hand)
