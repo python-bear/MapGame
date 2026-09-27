@@ -13,6 +13,7 @@ extends Control
 @onready var back_btn: Button = $SettingsPanel/VBox/Back
 @onready var music_slider: HSlider = $SettingsPanel/VBox/MusicRow/MusicVolume
 @onready var sfx_slider: HSlider = $SettingsPanel/VBox/SfxRow/SfxVolume
+@onready var bright_slider: HSlider = $SettingsPanel/VBox/BrightRow/Brightness
 
 var _hand: Font = preload("res://assets/fonts/Caveat.ttf")
 var _chapters_btn: Button
@@ -34,6 +35,10 @@ func _ready() -> void:
 	music_slider.value_changed.connect(Music.set_music_volume)
 	sfx_slider.value_changed.connect(Music.set_sfx_volume)
 	sfx_slider.drag_ended.connect(func(_c): Music.sfx("bell", 0.6))
+	bright_slider.min_value = Game.BRIGHTNESS_MIN
+	bright_slider.max_value = Game.BRIGHTNESS_MAX
+	bright_slider.value = Game.brightness
+	bright_slider.value_changed.connect(Game.set_brightness)
 	Music.play_set("menu")
 	Music.set_danger(0.0)
 	if OS.has_feature("web"):
@@ -132,7 +137,7 @@ func _on_resized() -> void:
 func _refresh_best() -> void:
 	var best := Game.get_best_time(Game.LEVELS[0]["id"])
 	if Game.show_timer and best >= 0.0:
-		best_label.text = "best survey:  " + Game.format_time(best)
+		best_label.text = "best %s:  %s" % [String(Game.LEVELS[0]["title"]).get_slice(". ", 1), Game.format_time(best)]
 	else:
 		best_label.text = ""
 

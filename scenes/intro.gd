@@ -7,7 +7,7 @@ const LINES := [
 	"We made camp where the river bends. While the others slept,\nI sat by the fire and inked what we had walked that day —\nevery ridge, every ford, every rotten bridge.",
 	"The guide would not tell me what lay past the plateau.\nHe only tapped the blank edge of my map, and shook his head.",
 	"The fire burned low. The pen grew heavy.\nI remember thinking, just one more line…",
-	"…and then the map was all there was.",
+	"…and I was at sea again, the night we made the crossing,\nthe chart spread out under the lantern —\nand then the map was all there was.",
 ]
 
 var _hand: Font = preload("res://assets/fonts/Caveat.ttf")
@@ -21,6 +21,7 @@ var _hold := 0.0
 
 
 func _ready() -> void:
+	add_to_group("cutscene")          # Game keeps the (paused) timer on screen
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_label = Label.new()
 	_label.set_anchors_preset(Control.PRESET_FULL_RECT)

@@ -55,6 +55,17 @@ func load_layers(terrain_rows: Array, height_rows: Array) -> void:
 			_h[y * width + x] = int(hrow[x]) if x < hrow.length() else 0
 
 
+## An independent copy (used to render how the map *will* look, in advance).
+func clone() -> MapGrid:
+	var g := MapGrid.new()
+	g.speeds = speeds
+	g.width = width
+	g.height = height
+	g._t = _t.duplicate()
+	g._h = _h.duplicate()
+	return g
+
+
 # ------------------------------------------------------------------ queries
 func in_bounds(c: Vector2i) -> bool:
 	return c.x >= 0 and c.y >= 0 and c.x < width and c.y < height

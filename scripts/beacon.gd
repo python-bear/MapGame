@@ -19,26 +19,11 @@ var _hand: Font = preload("res://assets/fonts/Caveat.ttf")
 
 func _ready() -> void:
 	add_to_group("beacons")
+	_light = _make_light()           # made now, switched on when lit
 
 
-func _process(delta: float) -> void:
-	_t += delta
-	if ship == null:
-		ship = get_tree().get_first_node_in_group("player") as Node2D
-	if not lit and ship and global_position.distance_to(ship.global_position) < radius:
-		light()
-	if lit:
-		_glow = minf(1.0, _glow + delta * 1.2)
-		if _light:
-			_light.energy = 1.1 * _glow + sin(_t * 7.0) * 0.05
-	queue_redraw()
-
-
-func light() -> void:
-	if lit:
-		return
-	lit = true
-	_light = PointLight2D.new()
+func _make_light() -> PointLight2D:
+	var l := PointLight2D.new()
 	var g := GradientTexture2D.new()
 	g.width = 256
 	g.height = 256
@@ -49,11 +34,36 @@ func light() -> void:
 	grad.set_color(0, Color(1, 1, 1, 1))
 	grad.set_color(1, Color(1, 1, 1, 0))
 	g.gradient = grad
-	_light.texture = g
-	_light.color = Color(1.0, 0.85, 0.55)
-	_light.texture_scale = 2.4
-	_light.energy = 0.0
-	_light.position = Vector2(0, -15)
+	l.texture = g
+	l.color = Color(1.0, 0.85, 0.55)
+	l.texture_scale = 2.4
+	l.energy = 0.0
+	l.position = Vector2(0, -15)
+	return l
+
+
+func _exit_tree() -> void:
+	if _light and not _light.is_inside_tree():
+		_light.free()                # never lit
+
+
+func _process(delta: float) -> void:
+	_t += delta
+	if ship == null:
+		ship = get_tree().get_first_node_in_group("player") as Node2D
+	if not lit and ship and global_position.distance_to(ship.global_position) < radius:
+		light()
+	if lit:
+		_glow = minf(1.0, _glow + delta * 1.2)
+		if _light and _light.is_inside_tree():
+			_light.energy = 1.1 * _glow + sin(_t * 7.0) * 0.05
+	queue_redraw()
+
+
+func light() -> void:
+	if lit:
+		return
+	lit = true
 	add_child(_light)
 	lit_up.emit(self)
 

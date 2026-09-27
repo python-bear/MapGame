@@ -44,6 +44,7 @@ var _xf := Transform2D.IDENTITY
 
 
 func _ready() -> void:
+	add_to_group("cutscene")          # Game keeps the (paused) timer on screen
 	_good = Game.ending != "caught"
 	_map_rect = MAP_GOOD if _good else MAP_BAD
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

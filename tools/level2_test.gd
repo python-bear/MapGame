@@ -32,7 +32,9 @@ func _press(v: Vector2) -> void:
 func _run() -> void:
 	var game = root.get_node("Game")
 	game.show_timer = true
-	game.current_level = 1
+	for i in game.LEVELS.size():
+		if game.LEVELS[i]["id"] == "level2_beacons":
+			game.current_level = i
 	change_scene_to_file("res://levels/level2/level2.tscn")
 	await _secs(1.5)
 	var level := current_scene

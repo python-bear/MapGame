@@ -19,27 +19,17 @@ Open `project.godot` in Godot and press **F5**.
 ## What's here
 
 - **Title screen** — Begin, Chapters (unlocked as you reach them, with best times and optional finds), Settings, Quit.
-- **Settings** — *Show speedrun timer* (**off by default**), Fullscreen, Music and Sound volume. The timer can also be toggled from the pause menu.
-- **Intro** — the campfire backstory (Space/Enter to advance, hold to skip). Not timed.
+- **Settings** — *Show speedrun timer* (**off by default**), Fullscreen, Music and Sound volume, **Brightness** (lifts the dark parts of the picture; a gamma curve over the whole screen, costing nothing when left at 1). The timer can also be toggled from the pause menu.
+- **Intro** — the campfire backstory (Space/Enter to advance, hold to skip). Not timed — but with the timer on it stays on screen, paused, through the intro, the interludes and the endings.
 - **Every level** opens with its title and a one-line goal in his handwriting, and keeps a small checklist top-left.
-- **Level 1 — "The Survey"** (Jay) · **Level 2 — "The Drowned Chart"** (Arv) · **Level 3 — "The Hollow"** (Owen, 3D cave) · **Level 4 — "Waking"** (Owen, the 3D finale, two endings).
-- **Interludes** — a few lines between levels (`scenes/interlude.tscn`); the cave leads into the finale through one.
+- The story, in order: **Level 1 — "The Drowned Chart"** (Arv) — he dreams the crossing from home to the island · **Level 2 — "The Survey"** (Jay) — the island's jungle, and the camp that becomes a cave · **Level 3 — "The Hollow"** (Owen, 3D cave) — trapped inside · **Level 4 — "Waking"** (Owen, the 3D finale, two endings) — the escape. (The folders keep their original names: the sea is `levels/level2/`, the jungle `levels/level1/`.)
+- **Interludes** — a few lines between each level and the next (`scenes/interlude.tscn`).
 - **Endings** — staged scenes at the campfire (hold Space to skip).
 - **Adaptive music** — faint at first, swelling as danger rises, darker with each level; silent when it matters most.
 
-### Level 1 at a glance — the map helps you
+### Level 1 at a glance — The Drowned Chart (`levels/level2/`)
 
-| Feature | How it plays |
-|---|---|
-| **The expedition route** | Five places, **in order**: the old stone marker → the river crossing → the abandoned campsite → the hilltop → the final surveying point. Only the next one is named. Terrain decides your route: trails fast (×1.3), jungle slow (×0.5), marsh very slow |
-| **Survey markers** (6, optional) | Stakes drawn on his map (S1–S6). Walk to one to record it. **Two aren't where the map says** — at the drawn spot: *"not here"*; the real stake is nearby |
-| **The map changes** | At the abandoned campsite: the rope bridge he crossed is gone, a path he never drew runs north through the jungle, and jungle covers open ground |
-| **Return to camp before nightfall** | At the surveying point the goal becomes RETURN TO CAMP, and the way back has changed again (the west stairs have fallen in, the east bridge is gone, the washed-out bridge is whole). 90 s of dusk: the light cools and your sight shrinks. Night falls → start again |
-| **Perfect map** (optional) | Finish without setting foot in dead-end terrain (the delta marsh, under the sheer cliffs, the far corner of the Green Deep, the spur to the washed-out bridge) |
-| The pen (2 ink) | **E / Space** facing a river: ink a bridge of up to 4 cells — or mend a broken one |
-| Charting | Ink spreads round you as you walk; high ground shows much more, jungle much less. **Tab**: your map |
-
-### Level 2 at a glance — the map becomes unreliable
+He dreams the crossing: the voyage out to the island.
 
 Night. **The Mainland** (harbour) → **the Open Deep** → **the Teeth** and **the Shoals** (two chains of islands) → **Harrow's Landing** (pier, three tents).
 
@@ -48,11 +38,24 @@ Night. **The Mainland** (harbour) → **the Open Deep** → **the Teeth** and **
 | **Three beacons** | Sail close to each lighthouse to light it. The pier stays dark — you can't dock — until all three are lit |
 | **Routes** | Through the Teeth: the top gap (long, safe), **the Maw** (fast, narrow, guarded), the bottom gap (choked with rocks). Through the Shoals: a north gap narrowed by a **sandbar** (shallow water — you run aground), a south gap, and a channel that looks like a way through and ends in a sandbar |
 | **The ocean changes** | 1st beacon: an island rises where the chart shows open sea. 2nd beacon: the Maw silts shut, and an island starts to **drift** up and down the approach to the Landing |
-| **Tension** | 0:00–0:30 nothing obvious: rings on the water, a long shadow sliding under the hull · 0:30–0:45 tentacles stand far off, watching, and sink when you come near; something knocks beneath the ship · 0:45–1:00 they hunt you, and rise in the channels ahead · 1:00+ they erupt all round the ship — at 1:15 the sea takes it |
+| **Tentacles** | One creature under the chart: a dark mantle breaks the surface, its single eye on the ship, and the limb rises out of the foam beside it |
+| **Tension** | 0:00–0:30 nothing obvious: rings on the water · 0:30–0:45 tentacles stand far off, watching, and sink when you come near; something knocks beneath the ship · 0:45–1:00 they hunt you, and rise in the channels ahead · 1:00+ they erupt all round the ship — at 1:15 the sea takes it |
 | **Don't hug the edges** | Sail along the chart's edge, or creep through the shallows, and they come up ahead of you there |
 | **Lost ships** (3, optional) | Sail alongside to signal. One's log reveals that a sandbar isn't really there (a hidden shortcut through the Shoals), one tells a story, one carries a message from another cartographer |
 | Flares (3) | **E / Space**: chart a wide circle ahead. Before 0:45 the light shows you a watcher; after, it wakes a hunter |
-| Currents | Drawn where charted; they push the ship |
+
+### Level 2 at a glance — The Survey (`levels/level1/`)
+
+| Feature | How it plays |
+|---|---|
+| **The expedition route** | Five places, **in order**: the old stone marker → the river crossing → the abandoned campsite → the hilltop → the final surveying point. Only the next one is named. Terrain decides your route: trails fast (×1.3), jungle slow (×0.5), marsh very slow |
+| **Survey markers** (6, optional) | Stakes drawn on his map (S1–S6). Walk to one to record it. **Two aren't where the map says** — at the drawn spot: *"not here"*; the real stake is nearby |
+| **The map changes** | At the abandoned campsite: the rope bridge he crossed is gone, a path he never drew runs north through the jungle, and jungle covers open ground |
+| **Return to camp before nightfall** | At the surveying point the goal becomes RETURN TO CAMP, and the way back has changed again (the west stairs have fallen in, the east bridge is gone, the washed-out bridge is whole). 90 s of dusk: the light cools and your sight shrinks. Night falls → start again |
+| **The camp is gone** | Coming back, a few steps from camp, the camp isn't there: a cave mouth is drawn where the tents and fire were, with a note in his hand beside it. Walk into it to finish — the cave is the next level |
+| **Perfect map** (optional) | Finish without setting foot in dead-end terrain (the delta marsh, under the sheer cliffs, the far corner of the Green Deep, the spur to the washed-out bridge) |
+| The pen (2 ink) | **E / Space** facing a river: ink a bridge of up to 4 cells — or mend a broken one |
+| Charting | Ink spreads round you as you walk; high ground shows much more, jungle much less. **Tab**: your map |
 
 ### Level 3 at a glance — The Hollow (3D cave)
 
@@ -140,11 +143,12 @@ scripts/
   beacon.gd            Level 2 lighthouses to light
   lost_ship.gd         Level 2 ships adrift (optional; each answers differently)
   drifting_island.gd   Level 2 islands that appear or move (they write themselves into the grid)
-  sea_omens.gd         Level 2's first half-minute: ripples, a shadow under the hull
-  sea_current.gd       Level 2 currents
+  sea_omens.gd         The sea level's first half-minute: rings on the water
+  sea_current.gd       (unused now — the sea's currents were removed)
+  sheet_baker.gd       Bakes a map/chart into a texture, and pre-renders its coming changes as patches (no stalls when the map changes)
   chart_reveal.gd      The charting mask: what's been inked, fed to shaders/chart_reveal.gdshader
   flare.gd             Level 2 flares
-  labyrinth_journal.gd Level 3's map (Tab) and what he has seen
+  labyrinth_journal.gd The finale's map (Tab) and what he has seen
   maze_builder.gd      Builds the 3D labyrinth from ASCII (walls, doors, wisps, exit); pathfinding for the beast (@tool)
   fps_player.gd        First-person player (no body), running + stamina, noise, interaction ray
   door.gd              Swinging wooden door (AnimatableBody3D leaf); gates, bars, locks, ajar
@@ -232,7 +236,9 @@ In either 2D scene, select the **Map** / **Chart** node and tick **Redraw** in t
 
 ## Level order and adding levels
 
-The level order lives in `Game.LEVELS` (`scripts/game.gd`): Survey → Drowned Chart → The Hollow → Waking. A level's optional `"finds"` names its optional collectables on the Chapters page. To show lines between a level and the next, add them to `TEXTS` in `scenes/interlude.gd` under the level's id and change to `res://scenes/interlude.tscn` when it's finished (as the cave does). The street/ghoul level from the original plan could slot in before the finale — add it to `LEVELS` and it's picked up automatically. A level only needs to:
+The level order lives in `Game.LEVELS` (`scripts/game.gd`): Drowned Chart → Survey → The Hollow → Waking. A level's optional `"finds"` names its optional collectables on the Chapters page. To show lines between a level and the next, add them to `TEXTS` in `scenes/interlude.gd` under the level's id — `Game.next_level()` goes by way of the interlude automatically.
+
+**When a 2D map changes in play**, don't redraw the whole sheet (it stalls for a moment): render the change ahead of time with `SheetBaker` and show its patch — see `_prebake_changes()` in either map level. The street/ghoul level from the original plan could slot in before the finale — add it to `LEVELS` and it's picked up automatically. A level only needs to:
 
 1. Instance `res://scenes/ui/hud.tscn` (timer, pause, restart, completion and failure cards come for free).
 2. Call `Game.begin_level_timer()` on the player's first input.
