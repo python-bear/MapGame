@@ -19,12 +19,16 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
+var shooting := false
 func _shot(name: String) -> void:
+	shooting = true
 	await process_frame
 	await process_frame
 	var img := root.get_viewport().get_texture().get_image()
 	img.save_png(out_dir.path_join(name + ".png"))
 	print("saved ", name)
+	await process_frame
+	shooting = false
 
 
 func _wait(frames: int) -> void:
@@ -38,7 +42,9 @@ func _run() -> void:
 	await _wait(90)
 	await _shot("01_menu")
 	game.show_timer = true
-	game.current_level = 0
+	for i in game.LEVELS.size():
+		if game.LEVELS[i]["id"] == "level1_expedition":
+			game.current_level = i
 	change_scene_to_file("res://levels/level1/level1.tscn")
 	await _wait(120)
 	await _shot("02_level_start")
@@ -56,6 +62,7 @@ func _run() -> void:
 		targets.append(Vector2i(w.cell))
 	var camp := grid.cell_of(level._start - Vector2(0, 28))
 	var shot_at := {1: "04_river", 3: "05_changed", 4: "06_survey_point"}
+	_watch_frames()
 	var t0 := Time.get_ticks_msec()
 	for k in targets.size():
 		var ok := await _walk_to(grid, player, targets[k], t0, game)
@@ -70,6 +77,7 @@ func _run() -> void:
 	print("leg: ", level.leg, " prompt=", level.hud._ctx.text if level.hud._ctx else "none", " vis=", level.hud._ctx.get_global_rect() if level.hud._ctx else Rect2())
 	var ok2 := await _walk_to(grid, player, camp, t0, game)
 	print("camp ok=", ok2)
+	await _shot("06c_the_cave")
 	print("finished: ", game.level_finished, "  level time: ", game.format_time(game.level_time))
 	await _wait(150)
 	await _shot("07_complete")
@@ -77,6 +85,22 @@ func _run() -> void:
 	await create_timer(4.0).timeout
 	await _shot("08_next")
 	quit()
+
+
+## The longest frame while walking (a stall when the map changes shows here).
+var worst_frame := 0
+func _watch_frames() -> void:
+	var last := Time.get_ticks_usec()
+	while true:
+		await process_frame
+		var now := Time.get_ticks_usec()
+		if shooting:
+			last = now
+			continue
+		if now - last > worst_frame:
+			worst_frame = now - last
+			print("  longest frame so far: %d ms" % (worst_frame / 1000))
+		last = now
 
 
 func _walk_to(grid: MapGrid, player: Node2D, goal: Vector2i, t0: int, game) -> bool:

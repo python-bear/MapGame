@@ -18,11 +18,14 @@ const RECORDS_PATH := "user://records.cfg"
 
 ## The dream, in order. Teammates: drop your scene at the path listed and it
 ## will be picked up automatically when the previous level is finished.
+## The story runs: the crossing (he dreams the voyage out) → the survey of the
+## island → the cave → the labyrinth. Between levels, scenes/interlude.gd shows
+## a few lines if it has any for the level just finished.
 const LEVELS := [
-	{"id": "level1_expedition", "title": "I. The Survey", "scene": "res://levels/level1/level1.tscn",
-		"goal": "Survey the route in order — then get back to camp before dark."},
-	{"id": "level2_beacons", "title": "II. The Drowned Chart", "scene": "res://levels/level2/level2.tscn",
-		"goal": "Light the three beacons, then dock at the island. Don't linger."},
+	{"id": "level2_beacons", "title": "I. The Drowned Chart", "scene": "res://levels/level2/level2.tscn",
+		"goal": "Light the three beacons, then dock at the island. Don't linger.", "finds": "lost ships"},
+	{"id": "level1_expedition", "title": "II. The Survey", "scene": "res://levels/level1/level1.tscn",
+		"goal": "Survey the route in order — then get back to camp before dark.", "finds": "survey markers"},
 	{"id": "cave_hollow", "title": "III. The Hollow", "scene": "res://levels/cave/cave.tscn",
 		"goal": "Go down into the dark. Find the door the painters found.", "finds": "cave paintings"},
 	{"id": "level3_keys", "title": "IV. Waking", "scene": "res://levels/level3/level3.tscn",
@@ -39,6 +42,10 @@ var last_total := 0
 ## Off by default: the first run should be immersive.
 var show_timer := false
 var fullscreen := false
+## 1 = as designed; higher lifts the dark (a gamma curve over the whole screen).
+var brightness := 1.0
+const BRIGHTNESS_MIN := 0.8
+const BRIGHTNESS_MAX := 2.0
 
 # --- run state ----------------------------------------------------------------
 var current_level := 0
@@ -52,6 +59,13 @@ var _records := ConfigFile.new()
 var _fade_layer: CanvasLayer
 var _fade_rect: ColorRect
 var _changing := false
+var _bright_layer: CanvasLayer
+var _bright_rect: ColorRect
+## The timer shown during cutscenes (intro, interludes, endings): paused, but
+## still on screen for runners. Levels show their own in the HUD.
+var _cut_layer: CanvasLayer
+var _cut_time: Label
+var _cut_total: Label
 
 
 func _ready() -> void:
@@ -60,12 +74,22 @@ func _ready() -> void:
 	_load_settings()
 	_records.load(RECORDS_PATH)
 	_build_fade()
+	_build_brightness()
+	_build_cutscene_timer()
+	_apply_brightness()
 
 
 func _process(delta: float) -> void:
 	if timing and not get_tree().paused:
 		level_time += delta
 		run_time += delta
+	var scene := get_tree().current_scene
+	var cut := show_timer and scene != null and scene.is_in_group("cutscene")
+	_cut_layer.visible = cut
+	if cut:
+		_cut_time.text = format_time(level_time)
+		_cut_total.text = "run " + format_time(run_time)
+		_cut_total.visible = full_run
 
 
 # ============================================================ timer
@@ -150,6 +174,9 @@ static func format_time(t: float) -> String:
 func start_new_run() -> void:
 	full_run = true
 	run_time = 0.0
+	level_time = 0.0
+	timing = false
+	level_finished = false
 	current_level = 0
 	change_scene("res://scenes/intro.tscn")
 
@@ -169,7 +196,12 @@ func restart_level() -> void:
 	change_scene(LEVELS[current_level]["scene"], 0.15)
 
 
-func next_level(fade_color: Color = Color(0.05, 0.04, 0.03)) -> void:
+## On to the next level — by way of its interlude, if the level just finished
+## has one (scenes/interlude.gd calls back with `from_interlude`).
+func next_level(fade_color: Color = Color(0.05, 0.04, 0.03), from_interlude := false) -> void:
+	if not from_interlude and _has_interlude(LEVELS[current_level]["id"]):
+		change_scene("res://scenes/interlude.tscn", 0.8, fade_color)
+		return
 	var next := current_level + 1
 	if next < LEVELS.size() and ResourceLoader.exists(LEVELS[next]["scene"]):
 		current_level = next
@@ -181,6 +213,11 @@ func next_level(fade_color: Color = Color(0.05, 0.04, 0.03)) -> void:
 	else:
 		# The rest of the dream hasn't been built yet.
 		change_scene("res://scenes/to_be_continued.tscn", 0.8, fade_color)
+
+
+func _has_interlude(id: String) -> bool:
+	var script: Script = load("res://scenes/interlude.gd")
+	return script != null and (script.get_script_constant_map().get("TEXTS", {}) as Dictionary).has(id)
 
 
 func level_title(index: int = -1) -> String:
@@ -233,6 +270,21 @@ func set_show_timer(on: bool) -> void:
 	settings_changed.emit()
 
 
+func set_brightness(v: float) -> void:
+	brightness = clampf(v, BRIGHTNESS_MIN, BRIGHTNESS_MAX)
+	_apply_brightness()
+	_save_settings()
+	settings_changed.emit()
+
+
+func _apply_brightness() -> void:
+	if _bright_rect == null:
+		return
+	var on := absf(brightness - 1.0) > 0.01
+	_bright_layer.visible = on          # no full-screen pass at all when it's off
+	(_bright_rect.material as ShaderMaterial).set_shader_parameter("brightness", brightness)
+
+
 func set_fullscreen(on: bool) -> void:
 	fullscreen = on
 	_apply_fullscreen()
@@ -252,6 +304,7 @@ func _load_settings() -> void:
 	if cfg.load(SETTINGS_PATH) == OK:
 		show_timer = cfg.get_value("speedrun", "show_timer", false)
 		fullscreen = cfg.get_value("display", "fullscreen", false)
+		brightness = clampf(float(cfg.get_value("display", "brightness", 1.0)), BRIGHTNESS_MIN, BRIGHTNESS_MAX)
 	_apply_fullscreen()
 
 
@@ -260,6 +313,7 @@ func _save_settings() -> void:
 	cfg.load(SETTINGS_PATH)  # keep other sections (audio)
 	cfg.set_value("speedrun", "show_timer", show_timer)
 	cfg.set_value("display", "fullscreen", fullscreen)
+	cfg.set_value("display", "brightness", brightness)
 	cfg.save(SETTINGS_PATH)
 
 
@@ -273,6 +327,43 @@ func _build_fade() -> void:
 	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_fade_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_fade_layer.add_child(_fade_rect)
+
+
+## Brightness: a gamma lift over everything (below the fades, so black stays black).
+func _build_brightness() -> void:
+	_bright_layer = CanvasLayer.new()
+	_bright_layer.layer = 99
+	add_child(_bright_layer)
+	_bright_rect = ColorRect.new()
+	_bright_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bright_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var mat := ShaderMaterial.new()
+	mat.shader = preload("res://shaders/brightness.gdshader")
+	_bright_rect.material = mat
+	_bright_layer.add_child(_bright_rect)
+
+
+func _build_cutscene_timer() -> void:
+	_cut_layer = CanvasLayer.new()
+	_cut_layer.layer = 90
+	_cut_layer.visible = false
+	add_child(_cut_layer)
+	# placed and styled exactly like the in-level HUD's, so it simply stays put
+	_cut_time = Label.new()
+	_cut_time.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_cut_time.offset_left = -240
+	_cut_time.offset_right = -24
+	_cut_time.offset_top = 14
+	_cut_time.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_cut_time.add_theme_font_size_override("font_size", 38)
+	_cut_time.add_theme_color_override("font_color", Color(0.98, 0.93, 0.82))
+	_cut_time.add_theme_color_override("font_outline_color", Color(0.15, 0.09, 0.05))
+	_cut_time.add_theme_constant_override("outline_size", 8)
+	_cut_layer.add_child(_cut_time)
+	_cut_total = _cut_time.duplicate()
+	_cut_total.offset_top = 58
+	_cut_total.add_theme_font_size_override("font_size", 22)
+	_cut_layer.add_child(_cut_total)
 
 
 ## Actions are registered in code so the project works out of the box.

@@ -229,4 +229,4 @@ func _on_door_entered() -> void:
 	Music.stop(2.0)
 	var pale := Color(0.86, 0.9, 1.0)
 	await overlay.fade_to(pale, 1.6)
-	Game.change_scene("res://scenes/interlude.tscn", 0.3, pale)
+	Game.next_level(pale)             # (by way of the interlude)

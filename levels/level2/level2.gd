@@ -1,5 +1,6 @@
 extends Node2D
-## Level 2 — "The Drowned Chart".
+## Level 1 — "The Drowned Chart". He dreams the crossing: the voyage out to
+## the island they are now camped on.
 ##
 ## Night. Sail from the Mainland, light the three navigation beacons, then
 ## make fast at the pier of the Landing (either side of it). The chart stops
@@ -9,7 +10,7 @@ extends Node2D
 ##     across the approach to the Landing.
 ##
 ## The tension builds on a clock:
-##   0:00–0:30  nothing obvious — rings on the water, a long shadow under the hull
+##   0:00–0:30  nothing obvious — rings on the water
 ##   0:30–0:45  tentacles stand far off, watching, and sink when you come near;
 ##              something knocks under the ship
 ##   0:45–1:00  they hunt you, and rise in the channels ahead
@@ -24,7 +25,6 @@ const PLAY_ZOOM := 1.8
 const BAKE_SCALE := 1.3
 const SEA_SPEEDS := {".": 1.0, ",": 0.75, "S": 1.0, "G": 1.0}
 
-const SHADOWS := [7.0, 17.0, 26.0]
 const WATCH_START := 30.0
 const WATCHERS := [30.0, 33.5, 37.0, 40.5, 43.0]
 const KNOCKS := [32.0, 36.5, 40.0, 43.5]
@@ -80,7 +80,6 @@ var flares := FLARES
 var _flare_script: Script = preload("res://scripts/flare.gd")
 var _flare_hud: Control
 var _omens: Node2D
-var _shadow_i := 0
 var _watch_i := 0
 var _knock_i := 0
 var _block_i := 0
@@ -94,15 +93,12 @@ var _dark_pier_cool := 0.0
 var _say_left := 0.0
 var _rebaking := false
 var _baked: Sprite2D
-
-## Currents in the Open Deep (cells). North and south lanes run east towards
-## the gaps at the ends of the Teeth; the middle one runs back west.
-const LANES := [
-	[Vector2(25, 8), Vector2(40, 5.5), Vector2(56, 6.5), Vector2(69, 8.5)],
-	[Vector2(27, 50), Vector2(42, 52.5), Vector2(56, 52.5), Vector2(69, 47.5)],
-	[Vector2(66, 36), Vector2(48, 37.5), Vector2(31, 34.5)],
-]
-var _currents: Node2D
+## The chart's changes, rendered ahead of time (see SheetBaker): name -> patch.
+var _patches := {}
+var _baker := SheetBaker.new()
+## Maw cells that were too close to the hull to silt at once; they fill in
+## once the ship has moved off.
+var _maw_left: Array[Vector2i] = []
 
 
 func _ready() -> void:
@@ -130,7 +126,7 @@ func _ready() -> void:
 	hud.failure_title = "Dragged under."
 	hud.handle_continue_myself = true
 	hud.continue_requested.connect(_leave)
-	hud.completion_text = "He makes fast at the pier and climbs the weed-slick ladder. At the top there is no town — only a stone arch, and beyond it, corridors going down into a dark that smells of wet stone. Behind him the sea folds shut like a book."
+	hud.completion_text = "He makes fast at the pier. The crew wade the stores ashore, and by dark there are tents above the tideline and a fire between them — and beyond the beach, the jungle, waiting to be mapped. Behind them the sea folds shut like a book."
 	Music.play_set("level2")
 	Music.set_danger(0.05)
 	_make_night()
@@ -141,16 +137,6 @@ func _ready() -> void:
 	_reveal.reveal(ship.position, 7.0)                 # the harbour he sailed from
 	_reveal.reveal(_pier.get_center() + Vector2(64, 0), 3.5)   # the lit pier, seen from afar
 	_build_flare_hud()
-	_currents = Node2D.new()
-	_currents.set_script(preload("res://scripts/sea_current.gd"))
-	_currents.name = "Currents"
-	var lanes: Array[PackedVector2Array] = []
-	for l in LANES:
-		lanes.append(PackedVector2Array(l))
-	_currents.lanes = lanes
-	_currents.reveal = _reveal
-	add_child(_currents)
-	move_child(_currents, $Route.get_index())
 	var names: Array = []
 	for bc in $Beacons.get_children():
 		names.append(bc.title)
@@ -188,6 +174,8 @@ func _process(delta: float) -> void:
 				say("The pier is dark. It won't answer until the three beacons are lit.")
 	if phase == Phase.SAILING:
 		_reveal.reveal(ship.position, LANTERN_SIGHT)
+	if not _maw_left.is_empty():
+		_silt_behind()
 	_update_flow(delta)
 	_update_camera(delta)
 	_update_mood(t, delta)
@@ -200,9 +188,6 @@ func _run_timeline(t: float) -> void:
 		var p: Vector2 = ship.position + Vector2.from_angle(randf() * TAU) * randf_range(90.0, 260.0)
 		if grid.is_walkable(grid.cell_of(p)):
 			_omens.ripple(p)
-	while _shadow_i < SHADOWS.size() and t >= SHADOWS[_shadow_i]:
-		_omens.shadow_pass()
-		_shadow_i += 1
 	# 0:30–0:45 — watchers in the distance, knocking beneath
 	while _watch_i < WATCHERS.size() and t >= WATCHERS[_watch_i]:
 		_spawn_watcher()
@@ -598,7 +583,6 @@ func _make_tentacle(mode: int, at: Vector2, hidden := false) -> Node2D:
 
 
 func _physics_process(_delta: float) -> void:
-	ship.drift = _currents.flow_at(ship.position) if phase == Phase.SAILING else Vector2.ZERO
 	# hunters speed up as the minute runs down
 	if phase == Phase.SAILING:
 		var sp := _hunter_speed()
@@ -768,47 +752,72 @@ func _leave() -> void:
 
 
 # ================================================================ baking
+## Render the paper + chart into a mipmapped texture shown through the
+## charting shader — then, while the title is up, render the two ways the sea
+## can change (so neither causes a stall when it happens).
 func _bake_sheet() -> void:
 	await _rebake()
+	await _prebake_changes()
 
 
-## Render the paper + chart into a mipmapped texture shown through the
-## charting shader. Called again whenever the sea changes under the chart.
 func _rebake() -> void:
 	if DisplayServer.get_name() == "headless" or _rebaking:
 		return
 	_rebaking = true
-	var vp := SubViewport.new()
-	vp.size = Vector2i((_sheet.size * BAKE_SCALE).ceil())
-	vp.transparent_bg = false
-	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	add_child(vp)
-	vp.canvas_transform = Transform2D(0.0, Vector2(BAKE_SCALE, BAKE_SCALE), 0.0, -_sheet.position * BAKE_SCALE)
-	vp.add_child(paper.duplicate())   # live paper stays below for the uncharted sea
-	chart.reparent(vp, false)
-	chart.show()
-	chart.queue_redraw()
-	await get_tree().process_frame
-	await RenderingServer.frame_post_draw
-	var img := vp.get_texture().get_image()
-	img.generate_mipmaps()
-	chart.reparent(self, false)
-	chart.hide()
+	var img: Image = await _baker.render(self, chart, paper, _sheet, BAKE_SCALE)
 	if _baked == null:
-		_baked = Sprite2D.new()
-		_baked.name = "BakedSheet"
-		_baked.centered = false
-		_baked.position = _sheet.position
-		_baked.scale = Vector2.ONE / BAKE_SCALE
-		_baked.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		_baked = _baker.sheet_sprite(img, _sheet, BAKE_SCALE)
 		add_child(_baked)
 		move_child(_baked, paper.get_index() + 1)
-		_baked.texture = ImageTexture.create_from_image(img)
 		_reveal.attach_to(_baked, _sheet, grid.pixel_size(), Color(0.05, 0.08, 0.12))
 	else:
+		img.generate_mipmaps()
 		_baked.texture = ImageTexture.create_from_image(img)
-	vp.queue_free()
+		for p in _patches.values():
+			p.hide()
+		_patches.clear()
 	_rebaking = false
+
+
+## Each change is rendered on a copy of the grid, on its own (they are far
+## apart on the chart, so either can happen first).
+func _prebake_changes() -> void:
+	if DisplayServer.get_name() == "headless" or _baked == null:
+		return
+	_rebaking = true
+	var live := grid
+	for change in [["maw", MAW, [".", ","], "z"], ["route", HIDDEN_BAR, ["z"], "."]]:
+		var g := live.clone()
+		var r: Rect2i = change[1]
+		for y in range(r.position.y, r.end.y):
+			for x in range(r.position.x, r.end.x):
+				if g.tile_xy(x, y) in change[2]:
+					g.set_tile(Vector2i(x, y), change[3])
+		chart.grid = g
+		chart.refresh()
+		var img: Image = await _baker.render(self, chart, paper, _sheet, BAKE_SCALE)
+		var patch := _baker.patch(img, Rect2(Vector2(r.position) * MapGrid.CELL, Vector2(r.size) * MapGrid.CELL).grow(3.0 * MapGrid.CELL),
+			_sheet, BAKE_SCALE, _baked.material)
+		patch.name = "Patch_" + change[0]
+		add_child(patch)
+		move_child(patch, _baked.get_index() + 1)
+		_patches[change[0]] = patch
+	chart.grid = live
+	chart.refresh()
+	_rebaking = false
+
+
+func _show_patch(patch_name: String) -> void:
+	while _rebaking:
+		await get_tree().process_frame
+	var p: Sprite2D = _patches.get(patch_name)
+	if p == null:
+		chart.refresh()
+		await _rebake()           # not baked (or headless): the slow way
+		return
+	p.modulate.a = 0.0
+	p.show()
+	create_tween().tween_property(p, "modulate:a", 1.0, 0.9)
 
 
 # ================================================================ beacons & the changing sea
@@ -863,15 +872,28 @@ func _sea_forgets() -> void:
 	for y in range(MAW.position.y, MAW.end.y):
 		for x in range(MAW.position.x, MAW.end.x):
 			var c := Vector2i(x, y)
-			if grid.tile(c) in [".", ","] and Vector2(c - here).length() > 4.0:
-				grid.set_tile(c, "z")
-	chart.refresh()
-	_rebake()
+			if grid.tile(c) in [".", ","]:
+				if Vector2(c - here).length() > 4.0:
+					grid.set_tile(c, "z")
+				else:
+					_maw_left.append(c)         # the silt closes in behind him
+	_show_patch("maw")
 	_make_island(Vector2(101.5, 13.0), Vector2(101.5, 45.0), 0.9, 3.0, 2.4, "it is moving")
 	Music.sfx("roar", 0.35, 0.45)
 	shake(4.0)
 	hud.show_note("in the margin, in his own hand",
 		"The Maw has silted shut. An island is drifting across the chart.\nThe map isn't describing the ocean any more. It's describing something else's idea of the ocean.", 8.0)
+
+
+## The Maw's last open water fills in once the ship has left it.
+func _silt_behind() -> void:
+	var here := grid.cell_of(ship.position)
+	for i in range(_maw_left.size() - 1, -1, -1):
+		var c := _maw_left[i]
+		if Vector2(c - here).length() > 5.0:
+			if grid.tile(c) in [".", ","]:
+				grid.set_tile(c, "z")
+			_maw_left.remove_at(i)
 
 
 func _make_island(a: Vector2, b: Vector2, speed: float, rx: float, ry: float, label: String) -> Node2D:
@@ -887,7 +909,7 @@ func _make_island(a: Vector2, b: Vector2, speed: float, rx: float, ry: float, la
 	isl.ship = ship
 	isl.reveal = _reveal
 	add_child(isl)
-	move_child(isl, _currents.get_index() + 1)
+	move_child(isl, $Route.get_index())
 	return isl
 
 
@@ -903,8 +925,7 @@ func _on_lost_ship(ls: Node2D) -> void:
 				for x in range(HIDDEN_BAR.position.x, HIDDEN_BAR.end.x):
 					if grid.tile_xy(x, y) == "z":
 						grid.set_tile(Vector2i(x, y), ".")
-			chart.refresh()
-			_rebake()
+			_show_patch("route")
 			for x in range(86, 100, 3):
 				_reveal.reveal(Vector2(x + 0.5, 27.5) * MapGrid.CELL, 2.5)
 			hud.show_note("the log of the " + ls.title.trim_prefix("the "),
@@ -914,4 +935,4 @@ func _on_lost_ship(ls: Node2D) -> void:
 				"Day 9. The stars are wrong. Mr Harrow swears the island moved in the night, and I have stopped arguing with him. We lit the lamps and something came up under the hull to look at them.", 8.0)
 		_:
 			hud.show_note("scratched into the " + ls.title.trim_prefix("the ") + "'s rail",
-				"IF YOU CAN READ THIS YOU ARE DREAMING TOO.\nDo not go through the arch on the Landing. There is no map for what is under it.\n— E. Vane, cartographer", 8.0)
+				"IF YOU CAN READ THIS YOU ARE DREAMING TOO.\nWhen you make camp on the island, do not sleep. The ground opens where you sleep, and there is no map for what is under it.\n— E. Vane, cartographer", 8.0)

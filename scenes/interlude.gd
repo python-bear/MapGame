@@ -4,6 +4,18 @@ extends Control
 ## next one. Space / Enter / click to advance, hold to skip. Not timed.
 
 const TEXTS := {
+	# after the crossing
+	"level2_beacons": [
+		"They came ashore at the Landing and made camp above the tideline.",
+		"In his dreams the maps would not let him go.\nThey had become the only thing that was real.",
+		"\"Look,\" said the guide in the morning, and pointed inland.",
+	],
+	# after the survey, when the camp has become a cave
+	"level1_expedition": [
+		"That was not the journey he and his crew had taken.",
+		"Where the camp had been, the ground opened into the dark,\nand cold air breathed out of it.",
+		"Something eldritch was at play. And it wanted him to go down.",
+	],
 	"cave_hollow": [
 		"Beyond the door the light was not daylight.\nIt was pale, and cold, and it came from nowhere at all.",
 		"The painters had drawn the way in.\nNot one of them had drawn the way out.",
@@ -22,6 +34,7 @@ var _hold := 0.0
 
 
 func _ready() -> void:
+	add_to_group("cutscene")          # Game keeps the (paused) timer on screen
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_lines = TEXTS.get(Game.LEVELS[Game.current_level]["id"], [])
@@ -47,17 +60,6 @@ func _ready() -> void:
 	hint.position.y -= 50
 	hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	add_child(hint)
-	# the level's time, quietly, for those who race
-	if Game.show_timer:
-		var t := Label.new()
-		var best := Game.get_best_time(Game.LEVELS[Game.current_level]["id"])
-		t.text = "%s   %s      best  %s" % [Game.level_title(), Game.format_time(Game.level_time), Game.format_time(best)]
-		t.add_theme_font_size_override("font_size", 22)
-		t.add_theme_color_override("font_color", Color(0.8, 0.82, 0.9, 0.7))
-		t.set_anchors_preset(Control.PRESET_CENTER_TOP)
-		t.position.y += 30
-		t.grow_horizontal = Control.GROW_DIRECTION_BOTH
-		add_child(t)
 	Music.sfx("hum", 0.35, 0.6)
 	_show_line(0)
 
@@ -99,7 +101,7 @@ func _finish() -> void:
 	if _done:
 		return
 	_done = true
-	Game.next_level(Color.BLACK)
+	Game.next_level(Color.BLACK, true)
 
 
 ## Black, a pale light far off, and dust drifting through it.

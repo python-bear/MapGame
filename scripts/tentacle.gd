@@ -211,23 +211,80 @@ func _spine() -> PackedVector2Array:
 	return pts
 
 
+const SKIN := Color(0.12, 0.07, 0.11, 0.98)
+const SKIN_PALE := Color(0.34, 0.15, 0.19, 0.92)
+const INK := Color(0.03, 0.01, 0.02, 1.0)
+const FOAM := Color(0.9, 0.95, 0.98)
+const SEA := Color(0.1, 0.2, 0.28)
+
+
 func _draw() -> void:
-	# the warning: a dark shape swelling under the surface, and bubbles
+	# the warning: something dark swelling under the surface, and bubbles
 	if _warn > 0.0:
-		for k in 4:
-			draw_circle(Vector2.ZERO, thickness * (1.2 + k * 0.7) * _warn, Color(0.02, 0.04, 0.07, 0.16 * _warn))
+		var sw := _ellipse(Vector2.ZERO, thickness * 2.2 * _warn, thickness * 1.6 * _warn, lean, 0.12)
+		draw_colored_polygon(sw, Color(0.02, 0.04, 0.07, 0.3 * _warn))
 		for b in _bubbles:
-			draw_arc(b.p, b.r, 0, TAU, 10, Color(0.85, 0.92, 0.95, b.a * 0.8), 1.2, true)
-	# ripples and the dark water where it breaks the surface
+			draw_arc(b.p, b.r, 0, TAU, 10, Color(FOAM, b.a * 0.8), 1.2, true)
 	for s in _splash:
-		draw_arc(Vector2.ZERO, s.r, 0, TAU, 28, Color(0.9, 0.95, 1.0, s.a * 0.8), 2.0, true)
-	var ring := thickness * 1.6 * (0.4 + emerge * 0.6)
-	draw_circle(Vector2.ZERO, ring + 6.0, Color(0.02, 0.06, 0.09, 0.45 * emerge))
-	for k in 2:
-		var rr := ring + 3.0 + fmod(_t * 10.0 + k * 7.0, 14.0)
-		draw_arc(Vector2.ZERO, rr, 0, TAU, 24, Color(0.85, 0.92, 0.95, (1.0 - (rr - ring) / 17.0) * 0.5 * emerge), 1.2, true)
+		_foam_ring(Vector2.ZERO, s.r, s.a * 0.8, 2.0, 1.7)
 	if emerge <= 0.02:
 		return
+	_draw_mantle()
+	# where the limb breaks the surface: a torn collar of foam
+	var collar := thickness * (1.05 + 0.25 * emerge)
+	_foam_ring(Vector2.ZERO, collar + 2.0 + sin(_t * 3.0) * 1.2, 0.75 * emerge, 1.6, 0.0)
+	_foam_ring(Vector2.ZERO, collar + 7.0 + fmod(_t * 9.0, 8.0), (1.0 - fmod(_t * 9.0, 8.0) / 8.0) * 0.45 * emerge, 1.2, 2.3)
+	_draw_limb()
+
+
+## The body under the water: a dark mantle half out of the sea, the limb
+## rising from its near edge and its one eye turned on the ship.
+func _draw_mantle() -> void:
+	var back := Vector2.from_angle(lean + PI)
+	var c := back * thickness * 1.05
+	var rx := thickness * 1.75 * (0.55 + 0.45 * emerge)
+	var ry := thickness * 1.3 * (0.55 + 0.45 * emerge)
+	var hump := _ellipse(c, rx, ry, lean, 0.06)
+	draw_colored_polygon(hump, SKIN)
+	# pale warts across the skin
+	for k in 7:
+		var q := c + Vector2(cos(k * 2.4) * rx * 0.6, sin(k * 1.7) * ry * 0.55).rotated(lean)
+		draw_circle(q, 1.1 + (k % 3) * 0.5, Color(SKIN_PALE, 0.55))
+	var outline := hump.duplicate()
+	outline.append(hump[0])
+	draw_polyline(outline, INK, 1.8, true)
+	# the far half is still under the sea: water washes over it, and a line of
+	# foam marks where it breaks the surface
+	var cap := PackedVector2Array()
+	for i in 13:
+		var ang := deg_to_rad(105.0 + 150.0 * i / 12.0)
+		cap.append(c + Vector2(cos(ang) * rx, sin(ang) * ry).rotated(lean))
+	draw_colored_polygon(cap, Color(SEA, 0.55))
+	var wa := cap[0]
+	var wb := cap[cap.size() - 1]
+	for k in 6:
+		if k % 3 == 2:
+			continue
+		var p0 := wa.lerp(wb, k / 6.0) + back * sin(_t * 2.0 + k) * 1.2
+		var p1 := wa.lerp(wb, (k + 1) / 6.0) + back * sin(_t * 2.0 + k + 1) * 1.2
+		draw_line(p0, p1, Color(FOAM, 0.7 * emerge), 1.5, true)
+	# the eye, set in the skin, watching the ship
+	if emerge > 0.35:
+		var ep := c - back * rx * 0.2
+		var er := thickness * 0.62
+		var look := Vector2.from_angle(lean)
+		if _ship:
+			look = (_ship.global_position - global_position).normalized()
+		var lid := _ellipse(ep, er * 1.25, er * 0.72, lean + PI / 2.0, 0.0)
+		draw_colored_polygon(lid, INK)
+		var iris := _ellipse(ep, er * 1.05, er * 0.58, lean + PI / 2.0, 0.0)
+		draw_colored_polygon(iris, Color(0.86, 0.7, 0.18, emerge))
+		var pupil := _ellipse(ep + look * er * 0.22, er * 0.14, er * 0.52, look.angle(), 0.0)
+		draw_colored_polygon(pupil, INK)
+		draw_circle(ep - look.orthogonal() * er * 0.35 + Vector2(-1, -1), 1.2, Color(1, 1, 1, 0.7 * emerge))
+
+
+func _draw_limb() -> void:
 	var spine := _spine()
 	var n := spine.size()
 	var left := PackedVector2Array()
@@ -246,17 +303,8 @@ func _draw() -> void:
 	var body := left.duplicate()
 	for i in range(right.size() - 1, -1, -1):
 		body.append(right[i])
-	var fill := Color(0.13, 0.06, 0.1, 0.97)
-	var belly := Color(0.32, 0.12, 0.16, 0.9)
-	var ink := Color(0.03, 0.01, 0.02, 1.0)
-	# shadow on the water
-	var shadow := PackedVector2Array()
-	for q in body:
-		shadow.append(q + Vector2(6, 9))
-	if Geometry2D.triangulate_polygon(shadow).size() > 0:
-		draw_colored_polygon(shadow, Color(0.0, 0.03, 0.05, 0.35))
 	if Geometry2D.triangulate_polygon(body).size() > 0:
-		draw_colored_polygon(body, fill)
+		draw_colored_polygon(body, SKIN)
 	# the paler underside
 	var under := PackedVector2Array()
 	for i in n:
@@ -264,18 +312,17 @@ func _draw() -> void:
 	for i in range(n - 1, -1, -1):
 		under.append(right[i])
 	if Geometry2D.triangulate_polygon(under).size() > 0:
-		draw_colored_polygon(under, belly)
+		draw_colored_polygon(under, SKIN_PALE)
 	# hooked barbs along the back
 	for i in range(1, n - 2, 2):
-		var t := float(i) / (n - 1)
 		var dir := (spine[i + 1] - spine[i]).normalized()
 		var nrm := Vector2(-dir.y, dir.x)
 		var h := widths[i] * 0.7 + 1.5
 		var b0 := left[i] - dir * h * 0.5
 		var tip := left[i] + nrm * h - dir * h * 0.6
-		draw_colored_polygon(PackedVector2Array([b0, tip, left[i] + dir * h * 0.4]), ink)
-	draw_polyline(left, ink, 2.0, true)
-	draw_polyline(right, ink, 2.0, true)
+		draw_colored_polygon(PackedVector2Array([b0, tip, left[i] + dir * h * 0.4]), INK)
+	draw_polyline(left, INK, 2.0, true)
+	draw_polyline(right, INK, 2.0, true)
 	# a wet sheen along the back
 	var sheen := PackedVector2Array()
 	for i in range(1, n - 3):
@@ -283,28 +330,39 @@ func _draw() -> void:
 	draw_polyline(sheen, Color(0.75, 0.62, 0.72, 0.35), 1.4, true)
 	# red-rimmed suckers along the underside
 	for i in range(2, n - 2, 2):
-		var t := float(i) / (n - 1)
 		var q := right[i].lerp(spine[i], 0.42)
 		var r := widths[i] * 0.34 + 0.6
 		draw_circle(q, r, Color(0.72, 0.36, 0.36, 0.95))
 		draw_circle(q, r * 0.45, Color(0.12, 0.02, 0.03, 0.95))
-		draw_arc(q, r, 0, TAU, 8, ink, 0.8, true)
+		draw_arc(q, r, 0, TAU, 8, INK, 0.8, true)
 	# the tip curls into a hook
 	var tip_dir := (spine[n - 1] - spine[n - 3]).normalized()
 	var hook := PackedVector2Array()
 	for k in 6:
 		var a := tip_dir.angle() + k * 0.5
 		hook.append(spine[n - 1] + Vector2.from_angle(a) * (3.5 - k * 0.4))
-	draw_polyline(hook, ink, 1.8, true)
-	# and at the base, just under the surface, an eye that follows the ship
-	if emerge > 0.5 and _ship:
-		var look := (_ship.global_position - global_position).normalized()
-		var ep := Vector2.from_angle(lean + PI) * thickness * 1.25
-		var er := thickness * 0.55
-		draw_circle(ep, er * 1.15, Color(0.03, 0.01, 0.02, 0.95))
-		draw_circle(ep, er, Color(0.85, 0.72, 0.2, 0.95))
-		var pupil := PackedVector2Array()
-		for k in 12:
-			var a := TAU * k / 12.0
-			pupil.append(ep + look * er * 0.25 + Vector2(cos(a) * er * 0.18, sin(a) * er * 0.8).rotated(look.angle() + PI / 2.0))
-		draw_colored_polygon(pupil, Color(0.02, 0.0, 0.0))
+	draw_polyline(hook, INK, 1.8, true)
+
+
+## A slightly lumpy ellipse (rotated by `rot`), as a polygon.
+func _ellipse(c: Vector2, rx: float, ry: float, rot: float, lumpy: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	for i in 24:
+		var a := TAU * i / 24.0
+		var k := 1.0 + lumpy * sin(a * 3.0 + 1.1) + lumpy * 0.6 * sin(a * 5.0 + _t * 0.8)
+		pts.append(c + Vector2(cos(a) * rx * k, sin(a) * ry * k).rotated(rot))
+	return pts
+
+
+## Foam: a ring of short white strokes with gaps, wobbling.
+func _foam_ring(c: Vector2, r: float, alpha: float, width: float, phase: float) -> void:
+	if r <= 0.5 or alpha <= 0.01:
+		return
+	var n := 14
+	for i in n:
+		if (i + int(phase * 3.0)) % 4 == 3:
+			continue
+		var a0 := TAU * i / n + phase
+		var a1 := a0 + TAU / n * 0.7
+		var r0 := r * (1.0 + 0.08 * sin(i * 2.3 + _t * 2.0))
+		draw_arc(c, r0, a0, a1, 4, Color(FOAM, alpha), width, true)

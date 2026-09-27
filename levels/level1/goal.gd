@@ -12,6 +12,14 @@ var active := true:
 		queue_redraw()
 ## Drawn as a camp (for the return leg) instead of the "?" of the unmapped.
 var camp_mode := false
+## What the camp circle is labelled (it becomes "the cave").
+var camp_label := "camp":
+	set(v):
+		camp_label = v
+		queue_redraw()
+## The pool of ink that spreads when the level is left.
+var bloom_color := Color(0.05, 0.1, 0.16)
+var bloom_rim := Color(0.12, 0.28, 0.4)
 
 var bloom := 0.0:
 	set(v):
@@ -47,7 +55,7 @@ func _draw() -> void:
 		for i in 16:
 			var a0 := TAU * i / 16 + _t * 0.3
 			draw_arc(Vector2.ZERO, 44.0 + pulse * 3.0, a0, a0 + TAU / 16 * 0.55, 5, red, 2.4, true)
-		Ink.text(self, _hand, Vector2(0, 60), "camp", 28, Color(0.45, 0.08, 0.05, 0.9))
+		Ink.text(self, _hand, Vector2(0, 60 if camp_label == "camp" else -74), camp_label, 28, Color(0.45, 0.08, 0.05, 0.9))
 		if bloom > 0.0:
 			_draw_bloom()
 		return
@@ -76,7 +84,7 @@ func _draw_bloom() -> void:
 		var a := TAU * i / steps
 		var wob := 1.0 + 0.18 * sin(a * 5.0 + _t * 1.5) + 0.1 * sin(a * 11.0 - _t * 2.0)
 		pts.append(Vector2.from_angle(a) * r * wob)
-	draw_colored_polygon(pts, Color(0.05, 0.1, 0.16, clampf(bloom * 3.0, 0.0, 0.96)))
+	draw_colored_polygon(pts, Color(bloom_color, clampf(bloom * 3.0, 0.0, 0.96)))
 	var rim := pts.duplicate()
 	rim.append(pts[0])
-	draw_polyline(rim, Color(0.12, 0.28, 0.4, 0.6), 3.0, true)
+	draw_polyline(rim, Color(bloom_rim, 0.6), 3.0, true)

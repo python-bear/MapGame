@@ -8,6 +8,9 @@ uniform sampler2D mask : filter_linear;
 uniform vec2 sheet_pos;
 uniform vec2 sheet_size;
 uniform vec2 map_size;
+// The drawing spills a little past the grid (smoothed shorelines, trees at the
+// edge); everything up to the inner neat line counts as map, not border.
+uniform float bleed = 16.0;
 uniform vec4 fresh_ink : source_color = vec4(0.12, 0.07, 0.04, 1.0);
 
 float hash(vec2 p) {
@@ -26,8 +29,11 @@ void fragment() {
 	vec4 col = texture(TEXTURE, UV);
 	vec2 world = sheet_pos + UV * sheet_size;
 	vec2 muv = world / map_size;
-	float inside = step(0.0, muv.x) * step(muv.x, 1.0) * step(0.0, muv.y) * step(muv.y, 1.0);
-	float m = texture(mask, muv).r;
+	vec2 lo = vec2(-bleed) / map_size;
+	vec2 hi = vec2(1.0) + vec2(bleed) / map_size;
+	float inside = step(lo.x, muv.x) * step(muv.x, hi.x) * step(lo.y, muv.y) * step(muv.y, hi.y);
+	// in the bleed band, use the charting of the nearest edge cell
+	float m = texture(mask, clamp(muv, vec2(0.0), vec2(1.0))).r;
 	// a ragged, blotted edge: the ink soaks unevenly into the fibres
 	float n = vnoise(world / 22.0) * 0.6 + vnoise(world / 7.0) * 0.4;
 	float a = smoothstep(0.38, 0.62, m + (n - 0.5) * 0.45);

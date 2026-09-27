@@ -37,6 +37,8 @@ const TRAIL_EDGE := Color(0.52, 0.24, 0.12, 0.85)
 const ROCK_FILL := Color(0.56, 0.50, 0.43, 0.95)
 
 var grid: MapGrid
+## When he comes back, the camp is gone: a cave mouth is drawn in its place.
+var camp_is_cave := false
 var _goal := Vector2(-99999, -99999)
 var _serif: Font = preload("res://assets/fonts/IMFellEnglish.ttf")
 var _italic: Font = preload("res://assets/fonts/IMFellEnglish-Italic.ttf")
@@ -465,6 +467,9 @@ func _draw_camp() -> void:
 	if s.x < 0:
 		return
 	var c := grid.cell_center(s)
+	if camp_is_cave:
+		_draw_cave_mouth(c)
+		return
 	# two tents and the campfire
 	for t: Vector2 in [Vector2(-28, -12), Vector2(0, -30), Vector2(26, -14)]:
 		var base := c + t
@@ -478,6 +483,50 @@ func _draw_camp() -> void:
 		var a := TAU * i / 6.0
 		draw_line(fire + Vector2.from_angle(a) * 3.0, fire + Vector2.from_angle(a) * 8.0, Ink.RED_INK, 1.5, true)
 	draw_circle(fire, 2.5, Ink.RED_INK)
+
+
+## Where the camp was: a low mound of rock with a black mouth in it, hachured
+## like the cliffs, and the cold ring of the campfire in front of it.
+func _draw_cave_mouth(c: Vector2) -> void:
+	var r := _rng_for(3, 3, 41)
+	var centre := c + Vector2(0, -14)
+	var mound := PackedVector2Array()
+	for i in 28:
+		var a := PI + PI * i / 27.0            # the upper half: a hump of rock
+		var k := 1.0 + 0.12 * sin(a * 5.0 + 0.7) + r.randf_range(-0.05, 0.05)
+		mound.append(centre + Vector2(cos(a) * 56.0, sin(a) * 40.0) * k)
+	mound.append(centre + Vector2(54, 12))
+	mound.append(centre + Vector2(-54, 12))
+	draw_colored_polygon(mound, Color(0.62, 0.52, 0.38, 0.95))
+	var edge := mound.duplicate()
+	edge.append(mound[0])
+	draw_polyline(edge, Ink.INK, 1.8, true)
+	# hachures running down the rock
+	for i in 11:
+		var a := PI + PI * (i + 0.5) / 11.0
+		var p0 := centre + Vector2(cos(a) * 54.0, sin(a) * 38.0)
+		var p1 := p0.lerp(centre + Vector2(0, 6), 0.28)
+		draw_line(p0, p1, Color(Ink.INK, 0.55), 1.1, true)
+	# the mouth
+	var mouth := PackedVector2Array()
+	for i in 20:
+		var a := PI + PI * i / 19.0
+		mouth.append(centre + Vector2(0, 10) + Vector2(cos(a) * 27.0, sin(a) * 29.0) * (1.0 + 0.06 * sin(a * 7.0)))
+	draw_colored_polygon(mouth, Color(0.05, 0.035, 0.03))
+	var rim := mouth.duplicate()
+	draw_polyline(rim, Ink.INK, 2.4, true)
+	# a few fallen stones
+	for k in 5:
+		var q := centre + Vector2(r.randf_range(-50, 50), r.randf_range(16, 24))
+		var rr := r.randf_range(2.5, 4.5)
+		draw_circle(q, rr, ROCK_FILL)
+		draw_arc(q, rr, 0, TAU, 10, Ink.INK, 1.0, true)
+	# the campfire, cold: a ring of grey stones and no flame
+	var fire := c + Vector2(0, 26)
+	for i in 7:
+		var a := TAU * i / 7.0
+		draw_circle(fire + Vector2.from_angle(a) * 6.5, 1.8, Color(0.35, 0.33, 0.3, 0.9))
+	draw_circle(fire, 2.2, Color(0.2, 0.19, 0.18, 0.7))
 
 
 # =============================================================== sheet

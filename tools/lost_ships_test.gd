@@ -5,7 +5,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var game = root.get_node("Game")
-	game.current_level = 1
+	for i in game.LEVELS.size():
+		if game.LEVELS[i]["id"] == "level2_beacons":
+			game.current_level = i
 	change_scene_to_file("res://levels/level2/level2.tscn")
 	await create_timer(1.5).timeout
 	var level := current_scene

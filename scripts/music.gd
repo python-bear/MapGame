@@ -11,6 +11,7 @@ extends Node
 ## Regenerate or add sets with tools/gen_music.py.
 
 const LAYERS := ["calm", "tension", "danger"]
+const SFX_NAMES := ["bell", "breath", "creak", "door_bash", "door_close", "door_open", "emerge", "exit", "fire", "flare", "grind", "heartbeat", "hum", "ink", "key", "lights_out", "lock", "page", "roar", "rustle", "screech", "splash", "splat", "step1", "step2", "step3", "thud", "unlock", "whisper"]
 
 ## Overall loudness of each set's calm layer — the early dream is faint.
 const SET_GAIN := {"menu": 0.55, "level1": 0.5, "level2": 0.8, "level3": 0.45}
@@ -33,6 +34,10 @@ func _ready() -> void:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_sfx_pool.append(p)
+	# load every sound now, so none has to come off the disk mid-game
+	for name in SFX_NAMES:
+		var path := "res://assets/sfx/%s.ogg" % name
+		_sfx_cache[name] = load(path) if ResourceLoader.exists(path) else null
 	var cfg := ConfigFile.new()
 	if cfg.load(Game.SETTINGS_PATH) == OK:
 		music_volume = cfg.get_value("audio", "music", music_volume)

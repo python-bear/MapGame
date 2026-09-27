@@ -1,7 +1,7 @@
 extends Node2D
-## Level 1 — "The Survey".
-## The jungle map he actually drew by the campfire. It feels safe at first —
-## and then the map stops behaving.
+## Level 2 — "The Survey".
+## Ashore on the island: the jungle map he actually drew by the campfire. It
+## feels safe at first — and then the map stops behaving.
 ##
 ##  1. The expedition route, in order: the old stone marker → the river
 ##     crossing → the abandoned campsite → the hilltop → the final surveying point.
@@ -10,7 +10,9 @@ extends Node2D
 ##     path appears that he never drew, and jungle covers open ground.
 ##  4. At the surveying point the goal becomes RETURN TO CAMP before nightfall —
 ##     and the way back has changed again.
-##  5. Optional: "Perfect map" — finish without setting foot in dead-end terrain.
+##  5. As he nears the camp, it isn't there: a cave mouth has opened where the
+##     fire was. Walking into it leads to the next level, the cave.
+##  6. Optional: "Perfect map" — finish without setting foot in dead-end terrain.
 
 const PLAY_ZOOM := 1.45
 ## The paper and map are drawn once into a texture at this resolution, so the
@@ -86,6 +88,12 @@ var _night: CanvasModulate
 var _return_started := 0.0
 var _rebaking := false
 var _say_left := 0.0
+## The map's changes, rendered ahead of time (see SheetBaker): name -> patch.
+var _patches := {}
+var _baker := SheetBaker.new()
+## How close (cells) he must come back to the camp before he sees it's gone.
+const CAVE_SEEN_AT := 7.0
+var _cave_shown := false
 
 
 ## A line in his hand, held on screen for a few seconds.
@@ -121,7 +129,9 @@ func _ready() -> void:
 	hud.set_ink(ink, INK, "E / Space — ink a bridge")
 	_setup_expedition()
 	Music.play_set("level1")
-	hud.completion_text = "The last line is drawn. The ink should dry — but it doesn't. It spreads, dark and wet, and the paper begins to feel like water."
+	hud.completion_text = "Back to the camp — but there is no camp. No tents, no porters, no fire: only a mouth of rock where they had been, and cold air breathing out of the ground. The ink of it is still wet."
+	goal.bloom_color = Color(0.04, 0.03, 0.025)
+	goal.bloom_rim = Color(0.3, 0.2, 0.12)
 
 
 func sight_radius() -> float:
@@ -136,6 +146,8 @@ func _process(delta: float) -> void:
 	_check_perfect()
 	_update_dusk(delta)
 	_update_camera(delta)
+	if leg == Leg.RETURN and not _cave_shown and player.position.distance_to(goal.position) < CAVE_SEEN_AT * MapGrid.CELL:
+		_the_camp_is_gone()
 	# the vignette tightens and cools as he nears the edge of the known
 	var total := _start.distance_to(goal.position)
 	var progress := 1.0 - clampf(player.position.distance_to(goal.position) / total, 0.0, 1.0)
@@ -315,48 +327,94 @@ func _check_perfect() -> void:
 
 
 # ================================================================ the map changes
-## Change some cells, then re-ink the sheet so the map shows it (where charted).
-func _mutate(changes: Array, note: String) -> void:
+## Change some cells, and show the map's own (pre-rendered) version of the
+## change, inking in over a moment. Falls back to re-inking the whole sheet.
+func _mutate(changes: Array, note: String, patch_name: String) -> void:
 	for ch in changes:
 		_grid.set_tile(ch[0], ch[1])
 	Music.sfx("ink", 1.0, 0.6)
 	shake_vignette()
 	say(note, 4.0)
-	await _rebake()
+	_show_patch(patch_name)
 
 
-func _cells_where(r: Rect2i, from: Array, to: String) -> Array:
+func _show_patch(patch_name: String) -> void:
+	while _rebaking:               # still baking at the start: wait for it
+		await get_tree().process_frame
+	var p: Sprite2D = _patches.get(patch_name)
+	if p == null:
+		await _rebake()            # not baked yet (or headless): the slow way
+		return
+	p.modulate.a = 0.0
+	p.show()
+	create_tween().tween_property(p, "modulate:a", 1.0, 0.9)
+
+
+static func _cells_where(g: MapGrid, r: Rect2i, from: Array, to: String) -> Array:
 	var out := []
 	for y in range(r.position.y, r.end.y):
 		for x in range(r.position.x, r.end.x):
-			if _grid.tile_xy(x, y) in from:
+			if g.tile_xy(x, y) in from:
 				out.append([Vector2i(x, y), to])
 	return out
 
 
 ## After the abandoned campsite: the rope bridge is gone, a path he never drew
 ## runs north through the jungle, and jungle has swallowed the open ground east.
-func _change_map_after_campsite() -> void:
+static func _campsite_changes(g: MapGrid) -> Array:
 	var ch := []
-	ch.append_array(_cells_where(Rect2i(18, 6, 5, 3), ["="], "~"))           # the rope bridge
-	ch.append_array(_cells_where(Rect2i(32, 18, 9, 5), ["."], "f"))          # jungle on open ground
+	ch.append_array(_cells_where(g, Rect2i(18, 6, 5, 3), ["="], "~"))           # the rope bridge
+	ch.append_array(_cells_where(g, Rect2i(32, 18, 9, 5), ["."], "f"))          # jungle on open ground
 	for p in [Vector2i(28, 20), Vector2i(29, 19), Vector2i(29, 18), Vector2i(30, 17), Vector2i(30, 16),
 			Vector2i(30, 15), Vector2i(31, 14), Vector2i(31, 13), Vector2i(31, 12), Vector2i(31, 11),
 			Vector2i(32, 10), Vector2i(32, 9)]:
 		ch.append([p, "p"])                                                   # a path that wasn't drawn
 		ch.append([p + Vector2i(1, 0), "p"])
-	_mutate(ch, "The map has changed. I did not draw this.")
+	return ch
 
 
 ## At the surveying point: the way down to the west has fallen in, the east
 ## bridge is gone — and the washed-out bridge is whole again.
-func _change_map_for_return() -> void:
+static func _return_changes(g: MapGrid) -> Array:
 	var ch := []
-	ch.append_array(_cells_where(Rect2i(31, 3, 3, 7), ["s"], "#"))           # the west stairs fall in
-	ch.append_array(_cells_where(Rect2i(57, 22, 3, 5), ["="], "~"))          # the east bridge
-	ch.append_array(_cells_where(Rect2i(42, 23, 3, 4), ["b"], "="))          # the old bridge, mended
+	ch.append_array(_cells_where(g, Rect2i(31, 3, 3, 7), ["s"], "#"))           # the west stairs fall in
+	ch.append_array(_cells_where(g, Rect2i(57, 22, 3, 5), ["="], "~"))          # the east bridge
+	ch.append_array(_cells_where(g, Rect2i(42, 23, 3, 4), ["b"], "="))          # the old bridge, mended
+	return ch
+
+
+func _change_map_after_campsite() -> void:
+	_mutate(_campsite_changes(_grid), "The map has changed. I did not draw this.", "campsite")
+
+
+func _change_map_for_return() -> void:
 	_spur_live = false
-	_mutate(ch, "The way back is not the way I came.")
+	_mutate(_return_changes(_grid), "The way back is not the way I came.", "return")
+
+
+## Nearly home — and the camp is gone. Where the tents and the fire were,
+## there is a cave mouth, drawn in his own ink.
+func _the_camp_is_gone() -> void:
+	_cave_shown = true
+	map.camp_is_cave = true        # (only matters if the sheet is ever re-inked)
+	_show_patch("cave")
+	Music.sfx("grind", 0.7, 0.6)
+	Music.sfx("ink", 0.8, 0.5)
+	shake_vignette()
+	say("The camp — it's gone. There's a cave where the fire was.", 4.5)
+	goal.camp_label = "the cave"
+	var note := MapNote.new()
+	note.name = "CaveNote"
+	note.text = "the camp was HERE.\nnow a cave mouth —\nthere was no cave!"
+	note.font_size = 22
+	note.rotation = 0.05
+	note.color_override = Color(0.55, 0.09, 0.05, 0.95)
+	note.position = _start + Vector2(150, -90)
+	note.modulate.a = 0.0
+	$Notes.add_child(note)
+	var old := get_node_or_null("Notes/CampNote")
+	if old:
+		old.text = "camp — night of day 2 — ?"
 
 
 func shake_vignette() -> void:
@@ -378,6 +436,8 @@ func _on_goal_reached() -> void:
 		goal.camp_mode = true
 		goal.rearm()
 		return
+	if not _cave_shown:
+		_the_camp_is_gone()
 	_finished = true
 	leg = Leg.DONE
 	hud.tick_objective("back to camp")
@@ -417,49 +477,65 @@ func _leave() -> void:
 	var tw := create_tween()
 	tw.tween_property(goal, "bloom", 1.0, 1.6).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 	await tw.finished
-	Game.next_level(Color(0.03, 0.07, 0.11))
+	Game.next_level(Color(0.04, 0.03, 0.025))
 
 
 ## Render the paper + map into a mipmapped texture and show it through the
-## charting shader. Called again whenever the map changes.
+## charting shader — then, while the level's title is up, render each of the
+## ways the map will change and keep just the patch each one touches.
 func _bake_sheet() -> void:
 	await _rebake()
+	await _prebake_changes()
 
 
 func _rebake() -> void:
 	if DisplayServer.get_name() == "headless" or _rebaking:
 		return
 	_rebaking = true
-	var vp := SubViewport.new()
-	vp.size = Vector2i((_sheet.size * BAKE_SCALE).ceil())
-	vp.transparent_bg = false
-	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
-	add_child(vp)
-	vp.canvas_transform = Transform2D(0.0, Vector2(BAKE_SCALE, BAKE_SCALE), 0.0, -_sheet.position * BAKE_SCALE)
-	# the bake gets its own copy of the paper; the live paper stays underneath,
-	# so uncharted areas show the very same sheet with no ink on it
-	vp.add_child(paper.duplicate())
-	map.reparent(vp, false)
-	map.show()
-	map.queue_redraw()
-	await get_tree().process_frame
-	await RenderingServer.frame_post_draw
-	var img := vp.get_texture().get_image()
-	img.generate_mipmaps()
-	map.reparent(self, false)        # keep the renderer for the next change
-	map.hide()
+	var img: Image = await _baker.render(self, map, paper, _sheet, BAKE_SCALE)
 	if _baked == null:
-		_baked = Sprite2D.new()
-		_baked.name = "BakedSheet"
-		_baked.centered = false
-		_baked.position = _sheet.position
-		_baked.scale = Vector2.ONE / BAKE_SCALE
-		_baked.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		_baked = _baker.sheet_sprite(img, _sheet, BAKE_SCALE)
 		add_child(_baked)
 		move_child(_baked, paper.get_index() + 1)
-		_baked.texture = ImageTexture.create_from_image(img)
 		_reveal.attach_to(_baked, _sheet, _grid.pixel_size())
 	else:
+		img.generate_mipmaps()
 		_baked.texture = ImageTexture.create_from_image(img)
-	vp.queue_free()
+		for p in _patches.values():
+			p.hide()              # the whole sheet is current again
+		_patches.clear()
+	_rebaking = false
+
+
+## The changes happen in this order, so each is rendered on top of the last
+## (on a copy of the grid; the live one is untouched until they happen).
+func _prebake_changes() -> void:
+	if DisplayServer.get_name() == "headless" or _baked == null:
+		return
+	_rebaking = true
+	var live := _grid
+	var g := live.clone()
+	map.grid = g
+	var steps := [
+		["campsite", _campsite_changes(g)],
+		["return", _return_changes(g)],
+		["cave", []],
+	]
+	var camp := g.find("S")
+	for step in steps:
+		var cells := []
+		for ch in step[1]:
+			g.set_tile(ch[0], ch[1])
+			cells.append(ch[0])
+		if step[0] == "cave":
+			map.camp_is_cave = true
+			cells = [camp + Vector2i(-2, -2), camp + Vector2i(2, 1)]
+		var img: Image = await _baker.render(self, map, paper, _sheet, BAKE_SCALE)
+		var patch := _baker.patch(img, SheetBaker.cells_rect(cells, 2.5), _sheet, BAKE_SCALE, _baked.material)
+		patch.name = "Patch_" + step[0]
+		add_child(patch)
+		move_child(patch, _baked.get_index() + 1 + _patches.size())
+		_patches[step[0]] = patch
+	map.grid = live
+	map.camp_is_cave = false
 	_rebaking = false
