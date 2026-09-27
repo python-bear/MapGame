@@ -187,7 +187,7 @@ func _process(delta: float) -> void:
 		_update_lights()
 	if _over:
 		return
-	player.speed_mult = 0.5 if journal.open else 1.0
+	player.speed_mult = 0.0 if journal.open else 1.0      # he stops to read his map
 	var here := maze.cell_of(player.global_position)
 	match phase:
 		Phase.EXPLORE:

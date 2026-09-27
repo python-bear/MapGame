@@ -159,10 +159,6 @@ func _on_draw() -> void:
 		var t := "the %s Key" % ORDER[selected]
 		var w := _hand.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 28).x
 		_label(Vector2((sz.x - w) / 2.0, y0 - 22.0), t, 28, Color(0.96, 0.9, 0.78, a))
-	if not owned.is_empty():
-		var hint := "1 2 3 / wheel — swap keys"
-		var hw := _hand.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
-		_label(Vector2((sz.x - hw) / 2.0, y0 + SLOT + 20.0), hint, 18, Color(0.92, 0.87, 0.74, 0.45))
 
 
 ## A little key: a ring, a shaft, two teeth. Empty slots show a faint outline.

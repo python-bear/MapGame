@@ -104,7 +104,7 @@ func _physics_process(delta: float) -> void:
 	dir.y = 0.0
 	if dir.length() > 1.0:
 		dir = dir.normalized()
-	var want_run := not frozen and Input.is_action_pressed("sprint") and input.length() > 0.1 and stamina > 0.0
+	var want_run := not frozen and speed_mult > 0.0 and Input.is_action_pressed("sprint") and input.length() > 0.1 and stamina > 0.0
 	if want_run and not running and stamina < 0.8:
 		want_run = false                  # too winded to start again yet
 	running = want_run

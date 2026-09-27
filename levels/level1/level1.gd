@@ -164,6 +164,7 @@ func _process(delta: float) -> void:
 func _update_camera(delta: float) -> void:
 	var vp := get_viewport_rect().size
 	var overview := Input.is_action_pressed("map_view") and not _finished
+	player.studying = overview          # you can't walk and read the map at once
 	var fit := minf(vp.x / _sheet.size.x, vp.y / _sheet.size.y)
 	var target_zoom := fit if overview else PLAY_ZOOM
 	if _finished:
@@ -484,6 +485,7 @@ func _leave() -> void:
 ## charting shader — then, while the level's title is up, render each of the
 ## ways the map will change and keep just the patch each one touches.
 func _bake_sheet() -> void:
+	await _baker.bake_paper(self, paper, 1.0)
 	await _rebake()
 	await _prebake_changes()
 

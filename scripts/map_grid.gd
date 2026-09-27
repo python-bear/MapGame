@@ -97,6 +97,27 @@ func set_tile(c: Vector2i, ch: String) -> void:
 		return
 	var row := _t[c.y]
 	_t[c.y] = row.substr(0, c.x) + ch + row.substr(c.x + 1)
+	_mask_dirty = true
+
+
+var _mask := PackedByteArray()
+var _mask_dirty := true
+var _mask_speeds: Dictionary = {}
+
+
+## 1 where a cell can be entered, 0 where not — one byte per cell, row by row
+## (index y * width + x). Cached until a tile or the speed table changes, so
+## flood fills over the whole grid don't have to look up every tile's String.
+func walk_mask() -> PackedByteArray:
+	if _mask_dirty or not is_same(_mask_speeds, speeds) or _mask.size() != width * height:
+		_mask.resize(width * height)
+		for y in height:
+			var row := _t[y]
+			for x in width:
+				_mask[y * width + x] = 1 if speeds.has(row[x]) else 0
+		_mask_dirty = false
+		_mask_speeds = speeds
+	return _mask
 
 
 func is_walkable(c: Vector2i) -> bool:

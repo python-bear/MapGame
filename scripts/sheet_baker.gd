@@ -9,6 +9,39 @@ extends RefCounted
 ## of the sheet it touches is kept, as a small "patch" sprite laid over the
 ## sheet. When the change happens in play, the patch simply fades in.
 
+## Render the paper (a ColorRect running the procedural parchment shader) once,
+## and from then on show that picture instead. The parchment shader layers
+## dozens of noise lookups per pixel; running it over the whole screen every
+## frame was the main cause of lag on the map levels (worst on high-DPI
+## screens). The node stays a ColorRect in the same place, so nothing else
+## needs to know.
+func bake_paper(host: Node, paper: ColorRect, scale := 1.0) -> void:
+	if DisplayServer.get_name() == "headless" or paper == null:
+		return
+	var sm := paper.material as ShaderMaterial
+	if sm == null or sm.shader != preload("res://shaders/parchment.gdshader"):
+		return                                   # already baked (or not parchment)
+	var vp := SubViewport.new()
+	vp.size = Vector2i((paper.size * scale).ceil())
+	vp.transparent_bg = false
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	host.add_child(vp)
+	vp.canvas_transform = Transform2D(0.0, Vector2(scale, scale), 0.0, Vector2.ZERO)
+	var copy := paper.duplicate() as ColorRect
+	copy.position = Vector2.ZERO
+	copy.show()
+	vp.add_child(copy)
+	await host.get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var img := vp.get_texture().get_image()
+	vp.queue_free()
+	img.generate_mipmaps()
+	var mat := ShaderMaterial.new()
+	mat.shader = preload("res://shaders/baked_paper.gdshader")
+	mat.set_shader_parameter("paper_tex", ImageTexture.create_from_image(img))
+	paper.material = mat
+
+
 ## Render `drawing` over a copy of `paper` into an image of the whole sheet.
 func render(host: Node, drawing: Node2D, paper: ColorRect, sheet: Rect2, scale: float) -> Image:
 	var vp := SubViewport.new()

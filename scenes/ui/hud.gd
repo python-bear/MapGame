@@ -26,6 +26,7 @@ var _hint: Label
 var _title: Label
 var _pause: Control
 var _pause_timer_check: CheckButton
+var _pause_bright: HSlider
 var _complete: Control
 var _complete_time: Label
 var _complete_best: Label
@@ -82,6 +83,7 @@ func _set_paused(on: bool) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if on else Input.MOUSE_MODE_CAPTURED
 	if on:
 		_pause_timer_check.set_pressed_no_signal(Game.show_timer)
+		_pause_bright.set_value_no_signal(Game.brightness)
 		(_pause.find_child("Resume", true, false) as Button).grab_focus()
 
 
@@ -207,6 +209,23 @@ func _build_pause() -> void:
 	_pause_timer_check.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_pause_timer_check.toggled.connect(Game.set_show_timer)
 	box.add_child(_pause_timer_check)
+	# brightness, as on the title screen's settings (it lifts the dark levels)
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	row.add_theme_constant_override("separation", 14)
+	var lbl := Label.new()
+	lbl.text = "Brightness"
+	row.add_child(lbl)
+	_pause_bright = HSlider.new()
+	_pause_bright.min_value = Game.BRIGHTNESS_MIN
+	_pause_bright.max_value = Game.BRIGHTNESS_MAX
+	_pause_bright.step = 0.05
+	_pause_bright.value = Game.brightness
+	_pause_bright.custom_minimum_size = Vector2(220, 0)
+	_pause_bright.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_pause_bright.value_changed.connect(Game.set_brightness)
+	row.add_child(_pause_bright)
+	box.add_child(row)
 	box.add_child(_button("Return to title", Game.go_to_menu))
 
 

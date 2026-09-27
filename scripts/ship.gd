@@ -17,6 +17,8 @@ var speed := 0.0
 ## An outside push (sea currents), set by the level every frame.
 var drift := Vector2.ZERO
 var frozen := false
+## Holding up the map (Tab): he stands still to study it.
+var studying := false
 var sink := 0.0:                        ## 0..1 — being dragged under
 	set(v):
 		sink = v
@@ -52,7 +54,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_stun = maxf(0.0, _stun - delta)
 	var input := Vector2.ZERO
-	if not frozen:
+	if not frozen and not studying:
 		input = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	var terrain := grid.speed_at(position)
 	if terrain <= 0.0:

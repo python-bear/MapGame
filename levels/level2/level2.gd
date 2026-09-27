@@ -21,7 +21,7 @@ extends Node2D
 ## Lost ships (optional): sail alongside to signal them. Each answers
 ## differently — a hidden route, a log, a message.
 
-const PLAY_ZOOM := 1.8
+const PLAY_ZOOM := 1.45        ## (was 1.8: too close, you couldn't see what was coming)
 const BAKE_SCALE := 1.3
 const SEA_SPEEDS := {".": 1.0, ",": 0.75, "S": 1.0, "G": 1.0}
 
@@ -61,6 +61,7 @@ var phase := Phase.SAILING
 var _sheet: Rect2
 var _zoom := PLAY_ZOOM
 var _cam := Vector2.ZERO
+var _look := Vector2.ZERO           ## how far the camera leads the ship, eased
 var _shake := 0.0
 var _wave_i := 0
 var _bell_i := 0
@@ -73,7 +74,7 @@ var _hunter_scene: Script = preload("res://scripts/tentacle.gd")
 var _thud_cool := 0.0
 var _reveal: ChartReveal
 ## At night the lantern only shows a little of the sea around the ship.
-const LANTERN_SIGHT := 4.0
+const LANTERN_SIGHT := 5.0      ## cells (was 4; widened with the camera so you can see what is coming)
 const FLARES := 3
 const FLARE_RANGE := 10.0         ## cells ahead of the bow
 var flares := FLARES
@@ -259,15 +260,18 @@ func _update_mood(t: float, delta: float) -> void:
 func _update_camera(delta: float) -> void:
 	var vp := get_viewport_rect().size
 	var overview := Input.is_action_pressed("map_view") and phase == Phase.SAILING
+	ship.studying = overview            # no hand on the helm while he reads the chart
 	var fit := minf(vp.x / _sheet.size.x, vp.y / _sheet.size.y)
 	var target_zoom := fit if overview else PLAY_ZOOM
 	if phase == Phase.CAUGHT or phase == Phase.DOOM:
 		target_zoom = PLAY_ZOOM * 1.35
 	_zoom = lerpf(_zoom, target_zoom, 1.0 - exp(-7.0 * delta))
 	camera.zoom = Vector2(_zoom, _zoom)
-	var look: Vector2 = ship.velocity() * 0.45
-	var target: Vector2 = _sheet.get_center() if overview else ship.position + look
-	_cam = _cam.lerp(target, 1.0 - exp(-6.0 * delta))
+	# lead the ship a little in the way it's going — gently, so a turn doesn't
+	# swing the whole view round
+	_look = _look.lerp(ship.velocity() * 0.16, 1.0 - exp(-1.8 * delta))
+	var target: Vector2 = _sheet.get_center() if overview else ship.position + _look
+	_cam = _cam.lerp(target, 1.0 - exp(-5.0 * delta))
 	var half := vp / (2.0 * _zoom)
 	var lo := _sheet.position + half
 	var hi := _sheet.end - half
@@ -361,22 +365,42 @@ func _update_flow(delta: float) -> void:
 	_flow_timer = 0.25
 	_flow_cell = c
 	var w := grid.width
-	_flow.resize(w * grid.height)
+	var h := grid.height
+	_flow.resize(w * h)
 	_flow.fill(-1)
 	if not grid.in_bounds(c):
 		return
-	var q: Array[Vector2i] = [c]
-	_flow[c.y * w + c.x] = 0
+	# a breadth-first flood over plain cell indices (this runs several times a
+	# second; looking tiles up one by one made it stutter)
+	var walk := grid.walk_mask()
+	var q := PackedInt32Array()
+	q.resize(w * h)
+	var start := c.y * w + c.x
+	q[0] = start
+	var tail := 1
+	_flow[start] = 0
 	var head := 0
-	while head < q.size():
-		var cur := q[head]
+	while head < tail:
+		var i := q[head]
 		head += 1
-		var d := _flow[cur.y * w + cur.x]
-		for o: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			var n := cur + o
-			if grid.in_bounds(n) and _flow[n.y * w + n.x] < 0 and grid.is_walkable(n):
-				_flow[n.y * w + n.x] = d + 1
-				q.append(n)
+		var d := _flow[i] + 1
+		var x := i % w
+		if x + 1 < w and _flow[i + 1] < 0 and walk[i + 1] == 1:
+			_flow[i + 1] = d
+			q[tail] = i + 1
+			tail += 1
+		if x > 0 and _flow[i - 1] < 0 and walk[i - 1] == 1:
+			_flow[i - 1] = d
+			q[tail] = i - 1
+			tail += 1
+		if i + w < w * h and _flow[i + w] < 0 and walk[i + w] == 1:
+			_flow[i + w] = d
+			q[tail] = i + w
+			tail += 1
+		if i >= w and _flow[i - w] < 0 and walk[i - w] == 1:
+			_flow[i - w] = d
+			q[tail] = i - w
+			tail += 1
 
 
 ## Which way should something in the water at `pos` swim to reach the ship?
@@ -756,6 +780,7 @@ func _leave() -> void:
 ## charting shader — then, while the title is up, render the two ways the sea
 ## can change (so neither causes a stall when it happens).
 func _bake_sheet() -> void:
+	await _baker.bake_paper(self, paper, 1.0)
 	await _rebake()
 	await _prebake_changes()
 

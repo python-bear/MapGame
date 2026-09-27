@@ -13,7 +13,7 @@ extends Node2D
 		data_script = v
 		_rebuild()
 @export var title := "A SURVEY OF THE UPPER SOMBRA BASIN"
-@export var subtitle := "surveyed on foot · expedition of 1923 · sheet I"
+@export var subtitle := "surveyed on foot · Anno Domini MCCCXLVIII · sheet I"
 ## The drawing fades out towards this cell, as if the pen hadn't got there yet.
 @export var unfinished_radius_cells := 6.0
 @export var redraw := false:

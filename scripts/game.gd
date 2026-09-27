@@ -196,9 +196,19 @@ func restart_level() -> void:
 	change_scene(LEVELS[current_level]["scene"], 0.15)
 
 
-## On to the next level — by way of its interlude, if the level just finished
+## Animated cutscenes that play after a level instead of its interlude (they
+## call next_level(…, true) when they end).
+const CUTSCENES := {
+	"level2_beacons": "res://scenes/arrival.tscn",      # the crossing → the isle at dawn, the Landing
+}
+
+
+## On to the next level — by way of its cutscene or interlude, if the level just finished
 ## has one (scenes/interlude.gd calls back with `from_interlude`).
 func next_level(fade_color: Color = Color(0.05, 0.04, 0.03), from_interlude := false) -> void:
+	if not from_interlude and CUTSCENES.has(LEVELS[current_level]["id"]):
+		change_scene(CUTSCENES[LEVELS[current_level]["id"]], 1.2, fade_color)
+		return
 	if not from_interlude and _has_interlude(LEVELS[current_level]["id"]):
 		change_scene("res://scenes/interlude.tscn", 0.8, fade_color)
 		return

@@ -12,6 +12,8 @@ signal moved(pos: Vector2)
 
 var grid: MapGrid
 var frozen := false
+## Holding up the map (Tab): he stands still to study it.
+var studying := false
 
 var _speed_mult := 1.0
 var _facing := Vector2.DOWN
@@ -31,7 +33,7 @@ func _physics_process(delta: float) -> void:
 	if grid == null:
 		return
 	var input := Vector2.ZERO
-	if not frozen:
+	if not frozen and not studying:
 		input = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	_moving = input.length() > 0.1
 	if _moving:
