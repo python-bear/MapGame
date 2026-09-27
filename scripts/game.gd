@@ -169,7 +169,13 @@ func restart_level() -> void:
 	change_scene(LEVELS[current_level]["scene"], 0.15)
 
 
-func next_level(fade_color: Color = Color(0.05, 0.04, 0.03)) -> void:
+## `via_interlude`: first show the lines (and the Codex page) written for the
+## level just finished, if there are any (scenes/interlude.gd). The interlude
+## itself calls this again with false.
+func next_level(fade_color: Color = Color(0.05, 0.04, 0.03), via_interlude := true) -> void:
+	if via_interlude and load("res://scenes/interlude.gd").has_lines(LEVELS[current_level]["id"]):
+		change_scene("res://scenes/interlude.tscn", 0.8, fade_color)
+		return
 	var next := current_level + 1
 	if next < LEVELS.size() and ResourceLoader.exists(LEVELS[next]["scene"]):
 		current_level = next

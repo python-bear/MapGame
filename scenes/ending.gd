@@ -1,17 +1,22 @@
 extends Control
 ## The two endings. Game.ending is "escape" or "caught".
 ##
-## Escape: white — then he wakes beside the campfire. His map lies in front of
-##   him. It is complete: every ridge, ford and bridge of the survey. Except, in
-##   the corner, a sign he does not remember drawing.
+## Escape: white — then he wakes beside the campfire. The others lie round it
+##   and will not wake; their eyes are open, all turned to his map. The map is
+##   finished — and in its corner, in a hand not his, the ring and the eye, and
+##   it bleeds. He escaped the Knot, but he has drawn it, and what is drawn the
+##   Warden knows: out beyond the tents, red eyes open in the dark.
 ## Caught: black — then the campfire, the expedition asleep. He sits beside them,
-##   upright, still holding the map. We move closer. The jungle on it has become
-##   the labyrinth — and something moves under the paper.
+##   upright, still holding the map. The jungle on it has become the labyrinth,
+##   something moves under the paper, and the dark between the trees reaches for
+##   him. At dawn: a cold fire, an empty bedroll, the map in the ashes — and in
+##   the labyrinth on it, one wall more than there was.
 ##
 ## Everything here is drawn in code, over a real render of the Level 1 map.
 
 var _hand: Font = preload("res://assets/fonts/Caveat.ttf")
 var _italic: Font = preload("res://assets/fonts/IMFellEnglish-Italic.ttf")
+var _fell: Font = preload("res://assets/fonts/IMFellEnglish.ttf")
 var _good := true
 var _t := 0.0
 
@@ -25,6 +30,12 @@ var maze_k := 0.0         ## 0 = the jungle map, 1 = the labyrinth
 var sign_k := 0.0         ## how much of the unremembered sign is drawn
 var lump_k := -1.0        ## the thing under the paper (-1 = not there)
 var fire_k := 1.0
+var eyes_k := 0.0         ## red eyes opening in the treeline
+var stare_k := 0.0        ## the sleepers' open eyes
+var drip_k := 0.0         ## the sign on the map, bleeding
+var tendril_k := 0.0      ## the dark between the trees, reaching for him
+var empty_k := 0.0        ## he is gone
+var newwall_k := 0.0      ## the new wall in the labyrinth
 
 const MAP_GOOD := Rect2(548, 588, 184, 118)       ## the map on the ground, in front of him
 const MAP_BAD := Rect2(474, 538, 150, 96)         ## the map in his lap
@@ -58,8 +69,8 @@ func _ready() -> void:
 	_caption.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_caption.position.y -= 70
 	_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_caption.add_theme_font_override("font", _hand)
-	_caption.add_theme_font_size_override("font_size", 36)
+	_caption.add_theme_font_override("font", _fell)
+	_caption.add_theme_font_size_override("font_size", 32)
 	_caption.add_theme_color_override("font_color", Color(0.97, 0.93, 0.84))
 	_caption.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.02, 0.95))
 	_caption.add_theme_constant_override("outline_size", 9)
@@ -126,20 +137,34 @@ func _render_map() -> void:
 func _play_good() -> void:
 	_tween("white", 0.0, 3.0)
 	await _wait(1.2)
-	await _say("Light. Too much of it — and then only the crackle of a fire.", 3.6)
-	await _say("He wakes beside the campfire. The others are still asleep.", 3.4)
-	await _say("His map is lying in front of him, where he left it.", 2.0)
+	await _say("Light. Too much of it — and then only the crackle of a fire.", 3.4)
+	await _say("He wakes beside the campfire. The others lie around it, as they were.", 3.4)
+	await _say("He says their names. None of them stir.", 3.0)
+	_tween("stare_k", 1.0, 2.5)
+	Music.sfx("heartbeat", 0.5, 0.8)
+	await _say("Their eyes are open. Every one of them is looking at the map.", 3.8)
 	await _move_to(_map_rect.get_center(), 720.0 / _map_rect.size.y * 0.92, 3.2)
-	await _say("He looks down. The map is complete.", 3.2)
-	await _say("Every ridge. Every ford. Every bridge he crossed.", 3.0)
+	await _say("The map is finished. Every ridge. Every ford. Every bridge he crossed.", 3.4)
 	# pan into the corner, where the pen draws what he never drew
 	var corner := _map_rect.position + _map_rect.size * Vector2(0.9, 0.84)
 	_move_to(corner, cam_zoom * 2.4, 3.0)
-	await _say("Except…", 2.6)
+	await _say("Except…", 2.4)
 	_tween("sign_k", 1.0, 4.0)
 	Music.sfx("ink", 0.6, 0.7)
-	await _say("In the corner, there is a sign he does not remember drawing.", 5.0)
-	await _wait(1.5)
+	await _say("In the corner: the ring, and the eye — in a hand that is not his.", 4.2)
+	_tween("drip_k", 1.0, 5.0)
+	Music.sfx("whisper", 0.5, 0.7)
+	await _say("The ink is wet. It is running. It is the colour of blood.", 3.8)
+	await _say("He escaped the Knot. But he has drawn it now —\nand what is drawn, the Warden knows.", 4.8)
+	# pull back: the fire failing, and something out past the tents
+	_move_to(Vector2(700, 440), 1.25, 5.0)
+	_tween("fire_k", 0.3, 5.0)
+	await _wait(3.2)
+	_tween("eyes_k", 1.0, 3.0)
+	Music.sfx("breath", 0.6, 0.6)
+	await _say("Out in the dark beyond the tents, something that has learned the way\nopens its eyes.", 5.0)
+	_tween("black", 1.0, 2.5)
+	await _wait(2.8)
 	_show_end()
 
 
@@ -161,10 +186,42 @@ func _play_bad() -> void:
 	lump_k = 0.0
 	_tween("lump_k", 1.0, 5.5)
 	await _say("Something moves underneath the paper.", 4.5)
-	Music.sfx("breath", 0.6, 0.7)
+	# back out: the dark between the trees comes for him
+	_move_to(Vector2(640, 430), 1.0, 3.0)
+	_tween("fire_k", 0.12, 5.0)
+	_tween("tendril_k", 1.0, 7.0)
+	_tween("eyes_k", 1.0, 4.0)
+	Music.sfx("breath", 0.7, 0.55)
+	await _say("The fire gutters. The dark between the trees comes closer —\nand it has arms.", 5.2)
+	Music.sfx("roar", 0.5, 0.5)
+	_tween("black", 1.0, 0.6)
+	await _wait(2.6)
+	# dawn: a cold fire, an empty bedroll, the map in the ashes
+	empty_k = 1.0
+	tendril_k = 0.0
+	eyes_k = 0.0
+	fire_k = 0.0
+	lump_k = -1.0
+	_map_rect = Rect2(610, 560, 120, 77)
+	cam_center = Vector2(640, 470)
+	cam_zoom = 1.2
+	_tween("black", 0.15, 3.0)
+	await _wait(1.5)
+	await _say("At dawn the porters wake to a cold fire, and an empty bedroll.", 4.0)
+	await _move_to(_map_rect.get_center(), 720.0 / _map_rect.size.y * 0.9, 4.0)
+	_tween("newwall_k", 1.0, 3.0)
+	Music.sfx("grind", 0.5, 0.5)
+	await _say("His map lies in the ashes. In the labyrinth drawn upon it,\nthere is one wall more than there was.", 5.2)
+	_italic_caption(true)
+	await _say("“Whosoever maps the Knot is mapped by it,\nand is made a wall within it, forever.”  — Codex of the Ringed Eye", 5.5)
+	_italic_caption(false)
 	_tween("black", 1.0, 2.2)
 	await _wait(2.6)
 	_show_end()
+
+
+func _italic_caption(on: bool) -> void:
+	_caption.add_theme_font_override("font", _italic if on else _fell)
 
 
 func _wait(t: float) -> void:
@@ -206,7 +263,7 @@ func _show_end() -> void:
 	if has_node("Hint"):
 		get_node("Hint").hide()
 	var tw := create_tween()
-	tw.tween_property(self, "black", 1.0 if not _good else 0.6, 1.2)
+	tw.tween_property(self, "black", 1.0 if not _good else 0.85, 1.2)
 	_end_box = VBoxContainer.new()
 	_end_box.set_anchors_preset(Control.PRESET_CENTER)
 	_end_box.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -216,15 +273,16 @@ func _show_end() -> void:
 	add_child(_end_box)
 	var panel_ink := Color(0.97, 0.93, 0.84)
 	var title := Label.new()
-	title.text = "The map is finished." if _good else "The map keeps its maker."
+	title.text = "What is drawn, the Warden knows." if _good else "The map keeps its maker."
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 64)
+	title.add_theme_font_override("font", _fell)
+	title.add_theme_font_size_override("font_size", 58)
 	title.add_theme_color_override("font_color", panel_ink)
 	title.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.02, 0.9))
 	title.add_theme_constant_override("outline_size", 10)
 	_end_box.add_child(title)
 	var sub := Label.new()
-	sub.text = "— you escaped the labyrinth —" if _good else "— the beast caught you —"
+	sub.text = "— you escaped the labyrinth. It has not let you go. —" if _good else "— the Warden caught you —"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sub.add_theme_font_override("font", _italic)
 	sub.add_theme_font_size_override("font_size", 26)
@@ -284,6 +342,7 @@ func _process(delta: float) -> void:
 				cam_center = _map_rect.get_center()
 				cam_zoom = 720.0 / _map_rect.size.y * 0.92
 				sign_k = 1.0
+				drip_k = 1.0
 				white = 0.0
 			_show_end()
 	else:
@@ -319,6 +378,7 @@ func _draw_scene() -> void:
 		draw_rect(Rect2(-600, y, 2480, 51), top.lerp(low, float(i) / 23.0))
 	_treeline(300.0, Color(0.06, 0.07, 0.06) if _good else Color(0.03, 0.02, 0.02), 1.0, 0.0)
 	_treeline(360.0, Color(0.035, 0.04, 0.035) if _good else Color(0.015, 0.01, 0.01), 1.4, 2.0)
+	_eyes_in_trees()
 	# the ground
 	draw_rect(Rect2(-600, 420, 2480, 700), Color(0.09, 0.07, 0.05) if _good else Color(0.05, 0.03, 0.025))
 	var fire := Vector2(640, 520)
@@ -337,8 +397,14 @@ func _draw_scene() -> void:
 	# the sleepers
 	for p: Vector2 in [Vector2(400, 560), Vector2(860, 575), Vector2(760, 640)]:
 		_sleeper(p, p.x > 640.0)
-	# him
-	_cartographer()
+	_tendrils()
+	# him (or, at the end, the bedroll where he was)
+	if empty_k < 0.5:
+		_cartographer()
+	else:
+		var bb := Vector2(470, 560)
+		draw_rect(Rect2(bb + Vector2(-60, -6), Vector2(150, 26)), Color(0.1, 0.07, 0.055))
+		draw_polyline(PackedVector2Array([bb + Vector2(-60, -6), bb + Vector2(20, -12), bb + Vector2(90, -4)]), Color(0.06, 0.04, 0.03), 3.0, true)
 	# the fire
 	_fire(fire, flick)
 	# the map
@@ -372,6 +438,11 @@ func _sleeper(p: Vector2, flip: bool) -> void:
 	draw_circle(p + Vector2(-70 if not flip else 70, -2), 17.0, col)
 	draw_circle(p + Vector2(-70 if not flip else 70, -2), 13.0, Color(0.3, 0.2, 0.14) if _good else Color(0.12, 0.08, 0.06))
 	draw_line(body.position, body.position + Vector2(body.size.x, 0), rim, 2.0)
+	if stare_k > 0.0:
+		var hc := p + Vector2(-70 if not flip else 70, -2)
+		for e: float in [-4.0, 4.0]:
+			draw_circle(hc + Vector2(e, -3), 1.6, Color(0.95, 0.9, 0.8, stare_k))
+			draw_circle(hc + Vector2(e + (2.0 if not flip else -2.0), -3), 0.8, Color(0.05, 0.03, 0.02, stare_k))
 	draw_circle(p + Vector2(70 if not flip else -70, 0), 17.0, col)
 
 
@@ -410,6 +481,11 @@ func _cartographer() -> void:
 
 
 func _fire(c: Vector2, flick: float) -> void:
+	if fire_k < 0.2:
+		# cold ashes, and a thread of smoke
+		for i in 18:
+			var ph := fmod(_t * 0.12 + i / 18.0, 1.0)
+			draw_circle(c + Vector2(sin(_t * 0.6 + i * 0.7) * 16.0 * ph, -10.0 - ph * 200.0), 4.0 + ph * 18.0, Color(0.4, 0.38, 0.37, 0.05 * (1.0 - ph) * (1.0 - fire_k * 5.0)))
 	# logs and stones
 	for a: float in [0.4, -0.4, 1.2]:
 		var d := Vector2.from_angle(a) * 46.0
@@ -480,6 +556,11 @@ func _draw_labyrinth(r: Rect2) -> void:
 					a = o + Vector2(x, y - 1) * cs
 					b = o + Vector2(x, y + 1) * cs
 				draw_line(a, b, Color(0.6, 0.05, 0.03, maze_k) if ch == "X" else ink, maxf(cs * 0.16, 0.4), true)
+	# one wall more than there was — still wet
+	if newwall_k > 0.0:
+		var a2 := o + Vector2(12, 12) * cs
+		var b2 := o + Vector2(14, 12) * cs
+		draw_line(a2, a2.lerp(b2, newwall_k), Color(0.45, 0.02, 0.02, maze_k), maxf(cs * 0.28, 0.6), true)
 	# the inked-over title
 	draw_string(_hand, r.position + Vector2(0, r.size.y - 2.0), "the Sombra basin", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 8, Color(0.12, 0.05, 0.04, 0.6 * maze_k))
 
@@ -493,6 +574,13 @@ func _draw_sign(r: Rect2) -> void:
 	draw_arc(c, rad, -PI / 2.0, -PI / 2.0 + minf(a, TAU), 40, ink, rad * 0.22, true)
 	if sign_k > 0.8:
 		draw_circle(c, rad * 0.3 * clampf((sign_k - 0.8) * 5.0, 0.0, 1.0), ink)
+	if drip_k > 0.0:
+		for i in 5:
+			var x := c.x - rad + i * rad * 0.5 + (Ink.hash2(i, 4.0) - 0.5) * rad * 0.3
+			var top := c.y + sqrt(maxf(rad * rad - pow(x - c.x, 2.0), 0.0)) * 0.9
+			var length := r.size.y * (0.05 + Ink.hash2(i, 5.0) * 0.12) * drip_k
+			draw_line(Vector2(x, top), Vector2(x, top + length), Color(0.5, 0.02, 0.02, 0.95), rad * 0.14, true)
+			draw_circle(Vector2(x, top + length), rad * 0.11, Color(0.5, 0.02, 0.02, 0.95))
 
 
 ## Something under the paper, pushing it up as it crawls.
@@ -521,3 +609,38 @@ func _draw_lump(r: Rect2) -> void:
 	var ring := body.duplicate()
 	ring.append(ring[0])
 	draw_polyline(ring, Color(0.1, 0.04, 0.03, 0.25), 0.6, true)
+
+
+## Red eyes, opening in the treeline beyond the tents.
+func _eyes_in_trees() -> void:
+	if eyes_k <= 0.0:
+		return
+	var pairs: Array = [Vector2(1060, 300)] if _good else [Vector2(1040, 310), Vector2(200, 300), Vector2(770, 250)]
+	for i in pairs.size():
+		var c: Vector2 = pairs[i]
+		var k := clampf(eyes_k * pairs.size() - i * 0.7, 0.0, 1.0)
+		var blink := 1.0 if fmod(_t + i * 1.7, 5.0) > 0.12 else 0.1
+		for sd: float in [-1.0, 1.0]:
+			var e := c + Vector2(sd * 16.0, 0)
+			for g in 8:
+				draw_circle(e, (26.0 - g * 3.0) * k, Color(0.9, 0.05, 0.02, 0.05 * k))
+			draw_colored_polygon(PackedVector2Array([e + Vector2(-9, 0), e + Vector2(0, -3.5 * blink), e + Vector2(9, 0), e + Vector2(0, 3.5 * blink)]), Color(1.0, 0.2, 0.08, k))
+
+
+## The dark between the trees, reaching across the ground for him.
+func _tendrils() -> void:
+	if tendril_k <= 0.0:
+		return
+	var him := Vector2(470, 520)
+	for i in 7:
+		var root := Vector2(-100 + i * 200.0, 400)
+		var tip := root.lerp(him + Vector2((i - 3) * 30.0, 30), tendril_k * (0.75 + 0.25 * Ink.hash2(i, 2.0)))
+		var pts := PackedVector2Array()
+		for j in 16:
+			var t := float(j) / 15.0
+			var p := root.lerp(tip, t)
+			p += (tip - root).orthogonal().normalized() * sin(t * 6.0 + _t * 1.8 + i) * 14.0 * t
+			pts.append(p)
+		for j in pts.size() - 1:
+			var w := lerpf(26.0, 3.0, float(j) / (pts.size() - 1))
+			draw_line(pts[j], pts[j + 1], Color(0.0, 0.0, 0.0, 0.92), w, true)
