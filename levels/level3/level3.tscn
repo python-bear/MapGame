@@ -63,4 +63,4 @@ script = ExtResource("5_beast")
 script = ExtResource("6_overlay")
 
 [node name="HUD" parent="." instance=ExtResource("7_hud")]
-controls_hint = "WASD — walk      Shift — run      Mouse / trackpad or  ,  .  — look      E / Space — doors      Q — ink a wall      Tab — your map      R — restart      Esc — pause"
+controls_hint = "WASD — walk      Shift — run      Mouse / trackpad or  ,  .  — look      E / Space — doors      1 2 3 / wheel — keys      Q — ink a wall      Tab — your map      R — restart      Esc — pause"

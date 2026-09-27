@@ -328,6 +328,8 @@ func build() -> void:
 						_key(c, ["Iron", "Stone", "Black"][int(ch) - 1])
 	_floor_and_void(size)
 	_commit_chunks()
+	_link_portals()
+	_decorate()
 
 
 func _chunk_for(p: Vector3) -> Dictionary:
@@ -539,6 +541,9 @@ func _light_doorway(x: int, y: int, fake: bool) -> void:
 	ld.name = ("FalseDoor_%d" % _fake_count) if fake else "DoorOfLight"
 	ld.fake = fake
 	ld.variant = _fake_count
+	# the false doors, in the order they appear in the data: the first two are
+	# a joined pair of portals, the third is a dud painted to look like the exit
+	ld.role = "exit" if not fake else ("dud" if _fake_count == 2 else "portal")
 	add_child(ld)
 	ld.setup(p, outward, door_width, door_height)
 	if fake:
@@ -549,6 +554,14 @@ func _light_doorway(x: int, y: int, fake: bool) -> void:
 		light_doors.push_front(ld)
 		exit_cell = cell_of(p - outward * 1.0)
 		ld.entered.connect(func(): exit_reached.emit())
+
+
+## Join the portal doors in pairs: each lets out of the other.
+func _link_portals() -> void:
+	var ps: Array = light_doors.filter(func(d): return d.role == "portal")
+	for i in range(0, ps.size() - 1, 2):
+		ps[i].partner = ps[i + 1]
+		ps[i + 1].partner = ps[i]
 
 
 func _key(c: Vector2i, key_name: String) -> void:
@@ -713,3 +726,411 @@ func _floor_and_void(size: float) -> void:
 	dq.material = dm
 	dust.mesh = dq
 	add_child(dust)
+
+
+# ================================================================ dressing
+## Cobwebs in the corners, the bones of those who didn't find the way out,
+## rusted chains hanging from the walls, and a few spiders. Placed with their
+## own random numbers so the walls themselves never change.
+var _deco_rng := RandomNumberGenerator.new()
+static var _web_tex: ImageTexture
+var _web_mat: StandardMaterial3D
+var _bone_mat: StandardMaterial3D
+var _socket_mat: StandardMaterial3D
+var _iron_mat: StandardMaterial3D
+
+
+func _decorate() -> void:
+	_deco_rng.seed = 4242
+	_web_mat = StandardMaterial3D.new()
+	_web_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_web_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_web_mat.albedo_texture = _web_texture()
+	_web_mat.albedo_color = Color(0.9, 0.9, 0.94, 0.95)
+	_web_mat.roughness = 1.0
+	_web_mat.emission_enabled = true
+	_web_mat.emission = Color(0.5, 0.52, 0.58)
+	_web_mat.emission_energy_multiplier = 0.15
+	_web_mat.emission_texture = _web_mat.albedo_texture
+	_bone_mat = StandardMaterial3D.new()
+	_bone_mat.albedo_color = Color(0.7, 0.66, 0.56)
+	_bone_mat.roughness = 0.85
+	_socket_mat = StandardMaterial3D.new()
+	_socket_mat.albedo_color = Color(0.02, 0.015, 0.012)
+	_socket_mat.roughness = 1.0
+	_iron_mat = StandardMaterial3D.new()
+	_iron_mat.albedo_color = Color(0.16, 0.12, 0.1)
+	_iron_mat.metallic = 0.6
+	_iron_mat.roughness = 0.7
+	_corner_webs()
+	_bones_everywhere()
+	_hanging_chains()
+
+
+func _ch(x: int, y: int) -> String:
+	if y < 0 or y >= rows.size() or x < 0 or x >= rows[y].length():
+		return ""
+	return rows[y][x]
+
+
+# ---------------------------------------------------------------- cobwebs
+## A web hung in the upper corner where two walls meet (and a few low ones by
+## the floor), sometimes with its spider.
+func _corner_webs() -> void:
+	var spots: Array = []
+	for y in range(0, rows.size(), 2):
+		for x in range(0, rows[y].length(), 2):
+			for sx: int in [-1, 1]:
+				for sz: int in [-1, 1]:
+					if _ch(x + sx, y) == "#" and _ch(x, y + sz) == "#" and _ch(x + sx, y + sz) != "":
+						spots.append([x, y, sx, sz])
+	var high := 0
+	var low := 0
+	var spiders := 0
+	for sp in spots:
+		var r := _deco_rng.randf()
+		if r < 0.2 and high < 48:
+			high += 1
+			var web := _web(sp[0], sp[1], sp[2], sp[3], _deco_rng.randf_range(0.9, 1.5), _deco_rng.randf_range(1.0, 1.6), false)
+			if spiders < 9 and _deco_rng.randf() < 0.25:
+				spiders += 1
+				_spider(web)
+		elif r < 0.27 and low < 16:
+			low += 1
+			_web(sp[0], sp[1], sp[2], sp[3], _deco_rng.randf_range(0.5, 0.8), _deco_rng.randf_range(0.45, 0.7), true)
+
+
+func _web(x: int, y: int, sx: int, sz: int, reach: float, h: float, by_floor: bool) -> MeshInstance3D:
+	var corner := _lattice_pos(x, y) + Vector3(sx * 0.26, 0, sz * 0.26)
+	var a := corner + Vector3(sx * reach, 0, 0)
+	var b := corner + Vector3(0, 0, sz * reach)
+	var mi := MeshInstance3D.new()
+	var q := QuadMesh.new()
+	q.size = Vector2(a.distance_to(b), h)
+	mi.mesh = q
+	mi.material_override = _web_mat
+	var top := wall_height - _deco_rng.randf_range(0.08, 0.35)
+	var mid := (a + b) * 0.5
+	mi.position = Vector3(mid.x, (h / 2.0 + 0.01) if by_floor else (top - h / 2.0), mid.z)
+	var n := Vector3(sx, 0, sz).normalized()
+	mi.basis = Basis.looking_at(n, Vector3.UP)
+	if by_floor:
+		mi.rotate_object_local(Vector3.FORWARD, PI)     # anchored along the floor, apex up
+	add_child(mi)
+	return mi
+
+
+## A spider web texture: a triangle hung by its top edge, apex down — radial
+## threads from a hub, a sagging spiral, a few broken strands.
+func _web_texture() -> ImageTexture:
+	if _web_tex:
+		return _web_tex
+	var s := 256
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(1, 1, 1, 0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	var hub := Vector2(128, 78)
+	var anchors: Array[Vector2] = []
+	var nr := 15
+	for i in nr:
+		# spread round the triangle: top edge, then down both sides to the apex
+		var t := float(i) / (nr - 1)
+		var p: Vector2
+		if t < 0.5:
+			var u := t / 0.5
+			p = Vector2(4, 4).lerp(Vector2(252, 4), u) if i % 2 == 0 else Vector2(4, 4).lerp(Vector2(128, 250), u)
+		else:
+			var u := (t - 0.5) / 0.5
+			p = Vector2(252, 4).lerp(Vector2(128, 250), u) if i % 2 == 0 else Vector2(4, 4).lerp(Vector2(252, 4), u)
+		anchors.append(p)
+	anchors.sort_custom(func(p1, p2): return (p1 - hub).angle() < (p2 - hub).angle())
+	for p in anchors:
+		_thread(img, hub, p, 1.0)
+	for k in range(1, 12):
+		var f := k / 12.0
+		for i in anchors.size():
+			if rng.randf() < 0.08:
+				continue                                 # a broken strand
+			var p1: Vector2 = hub.lerp(anchors[i], f * rng.randf_range(0.95, 1.05))
+			var p2: Vector2 = hub.lerp(anchors[(i + 1) % anchors.size()], f * rng.randf_range(0.95, 1.05))
+			if p1.distance_to(p2) > 120.0:
+				continue
+			var m := (p1 + p2) * 0.5
+			m = m.lerp(hub, 0.06)                        # a little sag toward the hub
+			_thread(img, p1, m, 0.8)
+			_thread(img, m, p2, 0.8)
+	img.generate_mipmaps()
+	_web_tex = ImageTexture.create_from_image(img)
+	return _web_tex
+
+
+func _thread(img: Image, a: Vector2, b: Vector2, alpha: float) -> void:
+	var steps := int(a.distance_to(b) * 1.5) + 1
+	var sz := img.get_width()
+	for i in steps + 1:
+		var p := a.lerp(b, float(i) / steps)
+		for o: Vector2i in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1), Vector2i(1, 1)]:
+			var x := int(p.x) + o.x
+			var y := int(p.y) + o.y
+			if x < 0 or y < 0 or x >= sz or y >= sz:
+				continue
+			var al := alpha * (1.0 if o == Vector2i.ZERO else (0.8 if o.x + o.y >= 0 and o != Vector2i(1, 1) else 0.45))
+			var c := img.get_pixel(x, y)
+			img.set_pixel(x, y, Color(1, 1, 1, maxf(c.a, al)))
+
+
+## A fat black spider on its web. Now and then it creeps a little way and stops.
+func _spider(web: MeshInstance3D) -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var body := SphereMesh.new()
+	body.radius = 0.045
+	body.height = 0.09
+	st.append_from(body, 0, Transform3D(Basis().scaled(Vector3(1.0, 1.25, 0.7)), Vector3(0, -0.05, 0)))
+	var head := SphereMesh.new()
+	head.radius = 0.025
+	head.height = 0.05
+	st.append_from(head, 0, Transform3D(Basis(), Vector3(0, 0.02, 0)))
+	for side: float in [-1.0, 1.0]:
+		for i in 4:
+			var leg := CylinderMesh.new()
+			leg.top_radius = 0.004
+			leg.bottom_radius = 0.004
+			leg.height = 0.13
+			var bas := Basis(Vector3.FORWARD, -side * PI / 2.0 + (i - 1.5) * 0.35 * side)
+			st.append_from(leg, 0, Transform3D(bas, Vector3(side * 0.06, 0.01 - i * 0.02, 0.01)))
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.03, 0.025, 0.02)
+	m.roughness = 0.5
+	mi.material_override = m
+	var q: QuadMesh = web.mesh
+	var home := Vector3(_deco_rng.randf_range(-0.15, 0.15) * q.size.x, _deco_rng.randf_range(0.0, 0.3) * q.size.y, 0.01)
+	mi.position = home
+	web.add_child(mi)
+	if Engine.is_editor_hint():
+		return
+	var tw := mi.create_tween().set_loops()
+	for k in 3:
+		var to := home + Vector3(_deco_rng.randf_range(-0.12, 0.12), _deco_rng.randf_range(-0.18, 0.1), 0)
+		tw.tween_interval(_deco_rng.randf_range(2.0, 6.0))
+		tw.tween_property(mi, "position", to, _deco_rng.randf_range(0.4, 1.2)).set_trans(Tween.TRANS_SINE)
+	tw.tween_interval(_deco_rng.randf_range(2.0, 5.0))
+	tw.tween_property(mi, "position", home, 1.0).set_trans(Tween.TRANS_SINE)
+
+
+# ---------------------------------------------------------------- bones
+## The ones who came before: slumped skeletons, heaps of bones, lone skulls.
+func _bones_everywhere() -> void:
+	var skip := ["S", "1", "2", "3", "p"]
+	for cy in n:
+		for cx in n:
+			if _ch(cx * 2 + 1, cy * 2 + 1) in skip:
+				continue
+			if _deco_rng.randf() > 0.24:
+				continue
+			var c := Vector2i(cx, cy)
+			var walls: Array[Vector3] = []
+			for d: Vector2i in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+				if _ch(cx * 2 + 1 + d.x, cy * 2 + 1 + d.y) == "#":
+					walls.append(Vector3(d.x, 0, d.y))
+			var bone := SurfaceTool.new()
+			bone.begin(Mesh.PRIMITIVE_TRIANGLES)
+			var dark := SurfaceTool.new()
+			dark.begin(Mesh.PRIMITIVE_TRIANGLES)
+			var r := _deco_rng.randf()
+			var center := cell_center(c)
+			if walls.is_empty():
+				_scattered(bone, dark, center)
+			else:
+				var w: Vector3 = walls[_deco_rng.randi() % walls.size()]
+				var along := Vector3(-w.z, 0, w.x) * _deco_rng.randf_range(-0.9, 0.9)
+				var base := center + w * (cell_size * 0.5 - 0.62) + along
+				if r < 0.38:
+					_skeleton(bone, dark, base, w)
+				elif r < 0.72:
+					_bone_pile(bone, dark, base + w * 0.12)
+				elif r < 0.86:
+					_skull(bone, dark, Transform3D(Basis(Vector3.UP, _deco_rng.randf() * TAU).rotated(Vector3.RIGHT, _deco_rng.randf_range(-0.3, 0.3)), base + w * 0.2 + Vector3(0, 0.09, 0)))
+				else:
+					_scattered(bone, dark, center)
+			for pair in [[bone, _bone_mat], [dark, _socket_mat]]:
+				var mi := MeshInstance3D.new()
+				mi.mesh = (pair[0] as SurfaceTool).commit()
+				mi.material_override = pair[1]
+				add_child(mi)
+
+
+func _long_bone(st: SurfaceTool, a: Vector3, b: Vector3, r := 0.02) -> void:
+	var d := b - a
+	var cap := CapsuleMesh.new()
+	cap.radius = r
+	cap.height = d.length() + r * 2.0
+	cap.radial_segments = 6
+	cap.rings = 2
+	st.append_from(cap, 0, Transform3D(Basis(Quaternion(Vector3.UP, d.normalized())), (a + b) * 0.5))
+	var knob := SphereMesh.new()
+	knob.radius = r * 1.7
+	knob.height = r * 3.4
+	knob.radial_segments = 6
+	knob.rings = 3
+	st.append_from(knob, 0, Transform3D(Basis(), a))
+	st.append_from(knob, 0, Transform3D(Basis(), b))
+
+
+func _skull(st: SurfaceTool, dark: SurfaceTool, xf: Transform3D) -> void:
+	var cr := SphereMesh.new()
+	cr.radius = 0.1
+	cr.height = 0.2
+	cr.radial_segments = 10
+	cr.rings = 6
+	st.append_from(cr, 0, xf * Transform3D(Basis().scaled(Vector3(0.85, 0.9, 1.1)), Vector3(0, 0.02, 0.01)))
+	var face := BoxMesh.new()
+	face.size = Vector3(0.12, 0.08, 0.08)
+	st.append_from(face, 0, xf * Transform3D(Basis(), Vector3(0, -0.04, -0.07)))
+	var jaw := BoxMesh.new()
+	jaw.size = Vector3(0.1, 0.03, 0.08)
+	st.append_from(jaw, 0, xf * Transform3D(Basis(Vector3.RIGHT, 0.25), Vector3(0, -0.09, -0.07)))
+	var eye := SphereMesh.new()
+	eye.radius = 0.024
+	eye.height = 0.048
+	eye.radial_segments = 6
+	eye.rings = 3
+	for s: float in [-1.0, 1.0]:
+		dark.append_from(eye, 0, xf * Transform3D(Basis(), Vector3(s * 0.035, -0.0, -0.1)))
+	var nose := SphereMesh.new()
+	nose.radius = 0.012
+	nose.height = 0.03
+	dark.append_from(nose, 0, xf * Transform3D(Basis(), Vector3(0, -0.04, -0.112)))
+
+
+## Sat against the wall where he died, legs out, head fallen forward.
+func _skeleton(st: SurfaceTool, dark: SurfaceTool, base: Vector3, wall: Vector3) -> void:
+	var fwd := -wall
+	var right := Vector3.UP.cross(fwd).normalized()
+	var fr := Basis(right, Vector3.UP, fwd)
+	base += wall * 0.18
+	var P := func(x: float, y: float, z: float) -> Vector3: return base + fr * Vector3(x, y, z)
+	var pelvis := SphereMesh.new()
+	pelvis.radius = 0.1
+	pelvis.height = 0.2
+	st.append_from(pelvis, 0, Transform3D(fr.scaled(Vector3(1.4, 0.6, 0.9)), P.call(0, 0.09, 0.05)))
+	# spine up to the wall, leaning back
+	var neck: Vector3 = P.call(0, 0.62, -0.1)
+	var hip: Vector3 = P.call(0, 0.12, 0.02)
+	var vert := SphereMesh.new()
+	vert.radius = 0.025
+	vert.height = 0.05
+	vert.radial_segments = 6
+	vert.rings = 3
+	for i in 9:
+		st.append_from(vert, 0, Transform3D(Basis(), hip.lerp(neck, i / 8.0)))
+	# ribs
+	for i in 5:
+		var at: Vector3 = hip.lerp(neck, 0.45 + i * 0.1)
+		for s: float in [-1.0, 1.0]:
+			var p1 := at + fr * Vector3(s * 0.1, -0.02, 0.05)
+			var p2 := at + fr * Vector3(s * 0.12, -0.05, 0.14)
+			var p3 := at + fr * Vector3(s * 0.04, -0.07, 0.19)
+			_long_bone(st, at, p1, 0.009)
+			_long_bone(st, p1, p2, 0.009)
+			_long_bone(st, p2, p3, 0.009)
+	# skull, fallen forward onto the chest
+	var tilt := _deco_rng.randf_range(0.4, 0.8)
+	var turn := _deco_rng.randf_range(-0.5, 0.5)
+	var sk := Basis.looking_at(fwd, Vector3.UP)
+	var skb := Basis(Vector3.UP, turn) * Basis(Vector3.RIGHT, -tilt)
+	_skull(st, dark, Transform3D(sk * skb, neck + Vector3(0, 0.1, 0) + fwd * 0.06))
+	# arms hanging to the floor
+	for s: float in [-1.0, 1.0]:
+		var sh: Vector3 = P.call(s * 0.17, 0.56, -0.07)
+		var el: Vector3 = P.call(s * 0.24, 0.3, 0.02)
+		var wr: Vector3 = P.call(s * (0.28 + _deco_rng.randf() * 0.1), 0.03, 0.14 + _deco_rng.randf() * 0.1)
+		_long_bone(st, sh, el, 0.017)
+		_long_bone(st, el, wr, 0.014)
+	# legs out along the floor
+	for s: float in [-1.0, 1.0]:
+		var hp: Vector3 = P.call(s * 0.1, 0.07, 0.08)
+		var kn: Vector3 = P.call(s * (0.18 + _deco_rng.randf() * 0.1), 0.05 + _deco_rng.randf() * 0.15, 0.48)
+		var an: Vector3 = P.call(s * (0.22 + _deco_rng.randf() * 0.15), 0.03, 0.85)
+		_long_bone(st, hp, kn, 0.022)
+		_long_bone(st, kn, an, 0.018)
+
+
+func _bone_pile(st: SurfaceTool, dark: SurfaceTool, base: Vector3) -> void:
+	for i in _deco_rng.randi_range(8, 14):
+		var a := _deco_rng.randf() * TAU
+		var l := _deco_rng.randf_range(0.25, 0.45)
+		var mid := base + Vector3(_deco_rng.randf_range(-0.3, 0.3), 0.03 + floorf(i / 4.0) * 0.035, _deco_rng.randf_range(-0.3, 0.3))
+		var d := Vector3(cos(a), _deco_rng.randf_range(-0.15, 0.15), sin(a)) * l * 0.5
+		_long_bone(st, mid - d, mid + d, _deco_rng.randf_range(0.014, 0.022))
+	_skull(st, dark, Transform3D(Basis(Vector3.UP, _deco_rng.randf() * TAU).rotated(Vector3.FORWARD, _deco_rng.randf_range(-0.4, 0.4)), base + Vector3(0, 0.2, 0)))
+
+
+func _scattered(st: SurfaceTool, dark: SurfaceTool, center: Vector3) -> void:
+	for i in _deco_rng.randi_range(3, 5):
+		var a := _deco_rng.randf() * TAU
+		var mid := center + Vector3(_deco_rng.randf_range(-1.0, 1.0), 0.025, _deco_rng.randf_range(-1.0, 1.0))
+		var d := Vector3(cos(a), 0.02, sin(a)) * _deco_rng.randf_range(0.12, 0.22)
+		_long_bone(st, mid - d, mid + d, 0.017)
+	if _deco_rng.randf() < 0.6:
+		_skull(st, dark, Transform3D(Basis(Vector3.UP, _deco_rng.randf() * TAU).rotated(Vector3.FORWARD, _deco_rng.randf_range(-1.4, 1.4)), center + Vector3(_deco_rng.randf_range(-0.9, 0.9), 0.08, _deco_rng.randf_range(-0.9, 0.9))))
+
+
+# ---------------------------------------------------------------- chains
+## Rusted chains hanging from the tops of walls, a manacle at the end. They sway.
+func _hanging_chains() -> void:
+	var count := 0
+	for y in rows.size():
+		for x in rows[y].length():
+			if (x % 2 == 0) == (y % 2 == 0) or _ch(x, y) != "#":
+				continue
+			if count >= 16 or _deco_rng.randf() > 0.07:
+				continue
+			var along_x := y % 2 == 0
+			var s: float = [-1.0, 1.0][_deco_rng.randi() % 2]
+			var nrm := Vector3(0, 0, s) if along_x else Vector3(s, 0, 0)
+			var cell_side := _ch(x + int(nrm.x), y + int(nrm.z))
+			if cell_side == "":
+				continue
+			var off: float = _deco_rng.randf_range(0.6, 1.1) * [-1.0, 1.0][_deco_rng.randi() % 2]
+			var p := _lattice_pos(x, y) + nrm * (wall_thickness * 0.5 + 0.05) + (Vector3(off, 0, 0) if along_x else Vector3(0, 0, off))
+			p.y = wall_height - 0.3
+			_chain(p, _deco_rng.randi_range(14, 26), along_x)
+			count += 1
+
+
+func _chain(top: Vector3, links: int, along_x: bool) -> void:
+	var pivot := Node3D.new()
+	pivot.position = top
+	add_child(pivot)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var link := TorusMesh.new()
+	link.inner_radius = 0.016
+	link.outer_radius = 0.036
+	link.rings = 8
+	link.ring_segments = 5
+	for i in links:
+		var b := Basis(Vector3.RIGHT, PI / 2.0).scaled(Vector3(1.0, 1.6, 1.0))
+		if i % 2 == 1:
+			b = Basis(Vector3.UP, PI / 2.0) * b
+		st.append_from(link, 0, Transform3D(b, Vector3(0, -i * 0.075, 0)))
+	var cuff := TorusMesh.new()
+	cuff.inner_radius = 0.05
+	cuff.outer_radius = 0.075
+	st.append_from(cuff, 0, Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, -links * 0.075 - 0.06, 0)))
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	mi.material_override = _iron_mat
+	pivot.add_child(mi)
+	if Engine.is_editor_hint():
+		return
+	var ax := "rotation:x" if along_x else "rotation:z"
+	var amp := _deco_rng.randf_range(0.02, 0.05)
+	var per := _deco_rng.randf_range(2.5, 4.5)
+	var tw := pivot.create_tween().set_loops()
+	tw.tween_property(pivot, ax, amp, per).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(pivot, ax, -amp, per).set_trans(Tween.TRANS_SINE)
