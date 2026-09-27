@@ -17,9 +17,12 @@ extends Node3D
 ##              goes out, the music stops, and it hunts you by sound.
 ##
 ## The labyrinth remembers you: a corridor of three doors has four the next time,
-## and then one stands ajar; a door you walked through becomes a wall. Three
-## false doors of light in the outer walls send you somewhere else — each is
-## wrong in one small way.
+## and then one stands ajar; a door you walked through becomes a wall.
+##
+## Three false doors in the outer walls: two glowing violet, with the same
+## spiral carved over them, are joined — walk into one and you step out of the
+## other, keys and all. The third looks like the Door of Light and is only
+## bricks behind a painted light.
 
 @onready var maze: MazeBuilder = $Maze
 @onready var player: CharacterBody3D = $Player
@@ -56,6 +59,7 @@ const FORGETFUL := [Vector2i(11, 10), Vector2i(11, 11), Vector2i(10, 11), Vector
 const FORGETFUL_DOOR := "23,22"
 
 var held := {}                      ## key name -> true
+var hotbar: CanvasLayer             ## the three key slots; gates open for the key in hand
 var journal: CanvasLayer
 var _wisps: Array = []
 var _guides: Array = []
@@ -106,6 +110,11 @@ func _ready() -> void:
 	journal.player = player
 	journal.beast = beast
 	add_child(journal)
+	hotbar = CanvasLayer.new()
+	hotbar.set_script(preload("res://scripts/key_hotbar.gd"))
+	hotbar.name = "KeyHotbar"
+	hotbar.camera = player.camera
+	add_child(hotbar)
 	# locks, keys, doors
 	for k: String in maze.keys:
 		maze.keys[k].taken.connect(_on_key)
@@ -115,8 +124,11 @@ func _ready() -> void:
 	if barred:
 		barred.bar_side = maze.cell_center(BARRED_SIDE)
 	for ld in maze.light_doors:
-		if ld.fake:
-			ld.fooled.connect(_on_fooled.bind(ld))
+		match ld.role:
+			"portal":
+				ld.traversed.connect(_on_portal.bind(ld))
+			"dud":
+				ld.fooled.connect(_on_dud.bind(ld))
 	_make_candle()
 	_make_guides()
 	hud.set_ink(ink, INK, "Q / right-click — ink a wall")
@@ -129,8 +141,19 @@ func _ready() -> void:
 	overlay.say("There is no map of this place. Not yet.", 3.5)
 
 
+## Can he open a gate that wants key `n`? Only with that key in his hand.
 func has_key(n: String) -> bool:
+	return held.has(n) and hotbar.has_selected(n)
+
+
+## Has he got key `n` at all (in hand or not)?
+func holds_key(n: String) -> bool:
 	return held.has(n)
+
+
+## Which number picks key `n` on the hotbar.
+func key_slot(n: String) -> int:
+	return hotbar.slot_of(n)
 
 
 func _update_notes() -> void:
@@ -203,6 +226,7 @@ func _update_lights() -> void:
 # ================================================================ keys
 func _on_key(k: Node3D) -> void:
 	held[k.key_name] = true
+	hotbar.add_key(k.key_name)
 	hud.tick_objective("the %s Key" % k.key_name)
 	Game.begin_level_timer()
 	match k.key_name:
@@ -375,29 +399,48 @@ func _zone(name: String, cells: Array, here: Vector2i) -> void:
 	z.pending = 0
 
 
-# ================================================================ false doors of light
-func _on_fooled(ld: Node3D) -> void:
-	overlay.flash(Color(1.0, 0.98, 0.93) if ld.variant != 0 else Color(0.86, 1.0, 0.9), 0.45, 1.2)
-	Music.sfx("whisper", 0.8)
-	await get_tree().create_timer(0.3).timeout
-	# somewhere else in the maze, far from here, that he could have walked to
-	var here := maze.cell_of(player.global_position)
-	var options: Array[Vector2i] = []
-	for y in maze.n:
-		for x in maze.n:
-			var c := Vector2i(x, y)
-			if c in SILENT or c in SANCTUM or absi(c.x - here.x) + absi(c.y - here.y) < 6:
-				continue
-			if maze.path(here, c).size() > 0 and c.y >= 7:
-				options.append(c)
-	if options.is_empty():
+# ================================================================ false doors
+## Two of the false doors are a joined pair: walk into one and you step out of
+## the other, on the far side of the labyrinth — keys, pages and ink all still
+## with you. The third is a dud: bricks behind a painted light.
+var _portal_cool := 0.0
+var _portal_uses := 0
+
+
+func _on_portal(from: Node3D) -> void:
+	var to: Node3D = from.partner
+	if _over or to == null or Time.get_ticks_msec() / 1000.0 < _portal_cool:
 		return
-	var to: Vector2i = options[randi() % options.size()]
-	player.global_position = maze.cell_center(to, 0.05)
-	player.velocity = Vector3.ZERO
-	player.rotation.y = randf() * TAU
-	await get_tree().create_timer(1.0).timeout
-	overlay.say(["That light was the wrong colour.", "It gave no light to the floor. And that hum…", "That wasn't the sign over the door."][ld.variant % 3], 3.5)
+	_portal_cool = Time.get_ticks_msec() / 1000.0 + 1.2
+	_portal_uses += 1
+	Game.begin_level_timer()
+	# a violet rush and a lurch of the lens…
+	overlay.flash(Color(0.45, 0.22, 0.85), 0.12, 0.8)
+	Music.sfx("whisper", 0.8, 1.3)
+	Music.sfx("hum", 1.0, 0.55)
+	var cam: Camera3D = player.camera
+	var fov := 72.0
+	var tw := create_tween()
+	tw.tween_property(cam, "fov", 118.0, 0.1).set_ease(Tween.EASE_IN)
+	tw.tween_property(cam, "fov", fov, 0.7).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# …and out of the other door, walking on into the maze
+	to.open_portal(0.25)
+	var dir: Vector3 = to.inward()
+	var spd := Vector2(player.velocity.x, player.velocity.z).length()
+	player.global_position = to.arrival_point(1.7) + Vector3(0, 0.05, 0)
+	player.rotation.y = atan2(-dir.x, -dir.z)
+	player.velocity = Vector3(dir.x, 0, dir.z) * spd
+	_shake = 0.6
+	await get_tree().create_timer(0.9).timeout
+	if _portal_uses == 1:
+		overlay.say("Through one door — and out of another, across the labyrinth. I still have everything I carried.", 5.0)
+	else:
+		overlay.say("The two doors are joined.", 2.5)
+
+
+func _on_dud(_ld: Node3D) -> void:
+	await get_tree().create_timer(0.8).timeout
+	overlay.say("Bricks. The light was painted on the stone.", 3.5)
 
 
 # ================================================================ ink
@@ -445,11 +488,26 @@ func _on_caught() -> void:
 	_record_pages()
 	player.frozen = true
 	Game.timing = false
-	player.face(beast.eye_position(), 0.18)
+	hotbar.hide_all()
+	overlay.set_prompt("")
+	overlay.say("", 0.01)
+	# the jumpscare: a black blink — then it is right in his face
+	var to := beast.global_position - player.global_position
+	player.rotation.y = atan2(-to.x, -to.z)
+	player.head.rotation.x = 0.0
+	player._pitch = 0.0
+	overlay.flash(Color.BLACK, 0.06, 0.05)
+	beast.jumpscare(player.camera)
+	Music.sfx("roar", 1.0, 0.8)
 	Music.sfx("screech", 1.0, 1.15)
+	_shake = 2.6
+	var cam: Camera3D = player.camera
+	var fov := cam.fov
+	var tw := create_tween()
+	tw.tween_property(cam, "fov", fov - 16.0, 0.12).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	await get_tree().create_timer(1.1).timeout
 	Music.sfx("splat", 1.0)
 	_shake = 2.2
-	await get_tree().create_timer(0.15).timeout
 	overlay.splatter()
 	await get_tree().create_timer(1.4).timeout
 	await overlay.fade_to(Color.BLACK, 1.6)
@@ -465,6 +523,7 @@ func _on_escape() -> void:
 	phase = Phase.OVER
 	_record_pages()
 	player.frozen = true
+	hotbar.hide_all()
 	Game.complete_level()
 	Music.sfx("exit", 1.0)
 	await overlay.fade_to(Color(1.0, 0.98, 0.94), 1.8)

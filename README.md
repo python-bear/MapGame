@@ -61,20 +61,24 @@ Night. **The Mainland** (harbour) → **the Open Deep** → **the Teeth** and **
 |---|---|
 | **The Iron Key — the silent room** | The door shuts behind you. The music stops. Take the key and every light goes out; the door opens again. Nothing seems to have changed — but outside, the corridors are not the ones you came in by. From now on your journal map (Tab) is ruined: *"I cannot map this place."* |
 | **The Stone Key — follow the lights** | Inside the Iron gate three groups of wisps set off three ways. Two flicker and hurry off into dead ends, and go out when you catch them. One moves steadily, turns slowly, and **waits for you** |
-| **The Black Key — the beast** | You hear it breathing in the east wing. Take the key and it rises out of the dark |
+| **The Black Key — the beast** | You hear it breathing in the east wing. Take the key and it rises out of the dark: a winged, tentacle-faced colossus with red eyes, bat wings (half-folded in the corridors, flung wide when it screams), long spined tentacles from its back and black mist round its feet |
+| **The key hotbar** | Three slots at the bottom of the screen for the Iron, Stone and Black keys. A key you pick up goes into your hand (you see it held out in front of you). **1 / 2 / 3** or the **mouse wheel** swap keys. A gate opens only for the key in your hand; with the wrong one out it tells you which number to press |
 | **Final chase** | The fog thickens, every wisp goes out, the music stops; only the Black Key's red glow in your hand. Then breathing behind you. Objective: **ESCAPE** |
-| **Sound** | Running (Shift) is loud (~20 m, as sound travels through the maze), doors ~13 m, walking ~4 m, standing still silent. The beast also sees you if you're close and in line with it. It is a little faster than you walk and slower than you run; running tires you. When it loses you it searches nearby and **stops to listen** — then it hears twice as far. Doors hold it ~1.3 s |
+| **Sound** | Running (Shift) is loud (~20 m, as sound travels through the maze), doors ~13 m, walking ~4 m, standing still silent. The beast also sees you if you're close and in line with it. It moves at **0.9× your walking speed**, so you can always get away if you keep moving; running tires you. When it loses you it searches nearby and **stops to listen** — then it hears twice as far. Doors hold it ~1.3 s |
 | **The labyrinth remembers** | A corridor with three doors has four the next time you come back, and the time after that one stands ajar. A door you walked through becomes a wall |
-| **False doors of light** | Three in the outer walls. Each is wrong in one small way — the light's colour, no light on the floor (and a hum), a different sign over it (and whispering). Open one and you're somewhere else in the maze |
+| **Joined doors** (west wall ↔ east wall) | Two doors glowing violet, each with the same spinning spiral carved over it. Open one and a swirl turns behind it; walk in and you step out of the other one, across the labyrinth, with a violet rush and a lurch of the lens. **Nothing resets** — keys, pages, ink and the timer all carry on |
+| **The dud** (south wall, near where you wake) | Looks just like the Door of Light. Open it: bricks. The light was painted on the stone, and it gutters out. It does nothing, ever again |
 | **The Door of Light** | Approach with the Black Key and it opens by itself; white light spills into the corridor. **The beast stops. It will not cross the light** |
+| **Caught** | A black blink, and it's in your face: wings thrown open, claws spread, its beard of tentacles flared, lit from below, roaring. Then blood on the lens |
+| **Dressing** | Cobwebs in the upper corners (a few with spiders that creep about), slumped skeletons, heaps of bones and lone skulls, rusted chains swaying from the walls. Placed from their own random seed, so the walls never change |
 | Also | Wooden doors (E / Space), a barred door out of the east wing (lift the bar from inside), ink walls (Q / right-click, 2), three torn pages |
 
 ### Endings
 
 - **Escape** — white. He wakes beside the campfire; the others are still asleep. His map lies in front of him: complete. Every ridge, every ford, every bridge. Except — in the corner, a sign he does not remember drawing (the sign carved over the Door of Light).
-- **Caught** — a screech, blood on the lens, the camera shakes, black. Then the campfire: the expedition asleep, and him sitting upright among them, eyes open, still holding the map. We move closer. The jungle on it has become the labyrinth — and something moves underneath the paper.
+- **Caught** — a jumpscare, blood on the lens, the camera shakes, black. Then the campfire: the expedition asleep, and him sitting upright among them, eyes open, still holding the map. We move closer. The jungle on it has become the labyrinth — and something moves underneath the paper.
 
-**Controls:** WASD / arrows / left stick to walk or steer · **Shift** run (Level 3) · **Tab / M** (hold) your map · **E / Space** bridges (L1), flares (L2), doors, keys & pages (L3) · **Q** ink a wall (L3) · look (L3) with the mouse, trackpad (or two-finger drag), **,** / **.** or the right stick · **R** restart · **Esc** pause.
+**Controls:** WASD / arrows / left stick to walk or steer · **Shift** run (Level 3) · **Tab / M** (hold) your map · **E / Space** bridges (L1), flares (L2), doors, keys & pages (L3) · **1 2 3 / mouse wheel** swap keys (L3) · **Q** ink a wall (L3) · look (L3) with the mouse, trackpad (or two-finger drag), **,** / **.** or the right stick · **R** restart · **Esc** pause.
 
 ## Music
 
@@ -126,11 +130,13 @@ scripts/
   chart_reveal.gd      The charting mask: what's been inked, fed to shaders/chart_reveal.gdshader
   flare.gd             Level 2 flares
   labyrinth_journal.gd Level 3's map (Tab) and what he has seen
-  maze_builder.gd      Builds the 3D labyrinth from ASCII (walls, doors, wisps, exit); pathfinding for the beast (@tool)
+  maze_builder.gd      Builds the 3D labyrinth from ASCII (walls, doors, wisps, exit, cobwebs, bones, chains); pathfinding for the beast (@tool)
   fps_player.gd        First-person player (no body), running + stamina, noise, interaction ray
   door.gd              Swinging wooden door (AnimatableBody3D leaf); gates, bars, locks, ajar
   wisp_group.gd        A cluster of will-o'-the-wisps with one light; guides (honest or lying)
-  beast.gd             The beast: body, animation, sound-based hunting AI (hunt / search / listen / halt)
+  beast.gd             The beast: body, animation, jumpscare, sound-based hunting AI (hunt / search / listen / halt)
+  key_hotbar.gd        The finale's key hotbar (3 slots, 1 2 3 / wheel) and the key held in front of the camera
+  light_door.gd        Doors in the outer wall: the Door of Light, the joined portal pair, the dud
   fps_overlay.gd       Prompt, his thoughts, stamina, page text, blood splatter, flashes, fades
   map_page.gd          Readable pages in the labyrinth
   ink_route.gd         The red dashed line of the route you've taken
@@ -143,7 +149,7 @@ scenes/
   ui/hud.tscn          Timer, level title, hints, pause menu, level-complete and failure cards
 levels/level1/         level1.tscn, level1.gd (route, markers, map changes, nightfall), level1_data.gd (THE MAP), expedition.gd, goal.gd
 levels/level2/         level2.tscn, level2.gd (timeline, beacons, the changing sea, ambushes, lost ships), level2_data.gd (THE CHART)
-levels/level3/         level3.tscn (fog, light, player, beast), level3.gd (keys, silent room, guides, memory, false doors, chase), level3_data.gd (THE LABYRINTH)
+levels/level3/         level3.tscn (fog, light, player, beast), level3.gd (keys, hotbar, silent room, guides, memory, joined doors, chase, jumpscare), level3_data.gd (THE LABYRINTH)
 shaders/               parchment paper, vignette, chart reveal
 assets/ui/             Rustic toggle and slider pieces (tools/gen_ui.py)
 docs/design_reviews.md Three rounds of review as judge Alex Chen, and what changed
@@ -161,7 +167,7 @@ tools/
   autoplay_test.gd     Dev test: a bot walks Level 1's route in order and back to camp, saving screenshots
   level2_test.gd       Dev test: a bot lights the beacons and docks (run), or waits out the clock (idle / doom)
   lost_ships_test.gd   Dev test: signal each lost ship in Level 2
-  finale_test.gd       Dev test: the whole finale — calm (no beast), run (beast awake), caught, fakes (false doors)
+  finale_test.gd       Dev test: the whole finale — calm (no beast), run (beast awake), caught, fakes (joined doors and the dud)
   ending_test.gd       Dev test: screenshots through both endings
   ui_shots.gd          Dev test: screenshots of menus
 ```
@@ -196,7 +202,7 @@ Guard tentacles are nodes under **Obstacles**, beacons under **Beacons**, lost s
 +  pillar     #  wall     ' '  open     D  wooden door
 I T K  the Iron / Stone / Black gates      Q  the silent room's door      B  door barred on one side
 d  a door that becomes a wall     e  a wall that becomes a door
-X  the Door of Light (outer wall) F  a false door of light (outer wall)
+X  the Door of Light (outer wall) F  a false door (outer wall): the 1st and 2nd are a joined pair, the 3rd a dud
 h  a wall that can sink    j  a gap a wall can rise into
 S  start      M  where the beast sleeps     1 2 3  the Iron, Stone and Black keys
 w  wisp group      p  torn page     r  rubble

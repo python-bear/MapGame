@@ -8,8 +8,8 @@ signal opened
 signal closed
 signal rattled             ## tried while locked
 
-## Locks. `lock_name` "Iron" / "Stone" / "Black" needs that key (asked of the
-## level via has_key()); "bar" opens only from the `bar_side` (a point on the
+## Locks. `lock_name` "Iron" / "Stone" / "Black" needs that key in his hand
+## (asked of the level via has_key()); "bar" opens only from the `bar_side` (a point on the
 ## side the bar is on); "shut" won't open at all until unlocked by the level.
 var locked := false
 var lock_name := ""
@@ -98,7 +98,12 @@ func prompt() -> String:
 			"shut":
 				return "it won't open"
 			_:
-				return ("unlock it with the %s Key" % lock_name) if _has_key() else ("locked — it wants a %s key" % lock_name.to_lower())
+				if _has_key():
+					return "unlock it with the %s Key" % lock_name
+				var lv := get_tree().get_first_node_in_group("level3")
+				if lv != null and lv.has_method("holds_key") and lv.holds_key(lock_name):
+					return "locked — take out the %s Key (%d)" % [lock_name, lv.key_slot(lock_name)]
+				return "locked — it wants a %s key" % lock_name.to_lower()
 	return "close the door" if is_open else "open the door"
 
 

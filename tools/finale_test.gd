@@ -138,15 +138,27 @@ func _run() -> void:
 			_face(ld.global_position + Vector3(0, 1.6, 0))
 			await _secs(0.8)
 			await _shot("50_door_%s" % ld.name)
-		var f = maze.light_doors[1]
+		# a portal: open it, walk into the swirl, come out of its partner
+		var f = maze.light_doors.filter(func(d): return d.role == "portal")[0]
 		player.global_position = f.global_position + f.global_transform.basis.z * 1.6
 		_face(f.global_position + Vector3(0, 1.3, 0))
 		await _interact()
-		await _secs(0.35)
-		await _shot("51_fooled_flash")
-		await _secs(2.5)
-		print("teleported to ", maze.cell_of(player.global_position))
-		await _shot("52_elsewhere")
+		await _secs(1.0)
+		await _shot("51_portal_open")
+		Input.action_press("move_up")
+		await _secs(1.2)
+		Input.action_release("move_up")
+		await _shot("52_through")
+		await _secs(1.5)
+		print("portal: came out at ", maze.cell_of(player.global_position), " (partner ", f.partner.name, " at ", maze.cell_of(f.partner.arrival_point()), ")")
+		await _shot("53_elsewhere")
+		# the dud: bricks
+		var dud = maze.light_doors.filter(func(d): return d.role == "dud")[0]
+		player.global_position = dud.global_position + dud.global_transform.basis.z * 1.6
+		_face(dud.global_position + Vector3(0, 1.3, 0))
+		await _interact()
+		await _secs(1.5)
+		await _shot("54_dud")
 		quit()
 		return
 	# ---- the silent room
