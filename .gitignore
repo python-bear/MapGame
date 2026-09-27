@@ -16,3 +16,4 @@ mono_crash.*.json
 # System specific files (Optional)
 *.tmp
 *.log
+
