@@ -1,0 +1,319 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://levels/level2/level2.gd" id="1_level"]
+[ext_resource type="Shader" path="res://shaders/parchment.gdshader" id="2_paper"]
+[ext_resource type="Script" path="res://scripts/sea_chart_renderer.gd" id="3_chart"]
+[ext_resource type="Script" path="res://levels/level2/level2_data.gd" id="4_data"]
+[ext_resource type="Script" path="res://scripts/map_note.gd" id="5_note"]
+[ext_resource type="Script" path="res://scripts/ink_route.gd" id="6_route"]
+[ext_resource type="Script" path="res://scripts/tentacle.gd" id="7_tentacle"]
+[ext_resource type="Script" path="res://scripts/ship.gd" id="9_ship"]
+[ext_resource type="Shader" path="res://shaders/vignette.gdshader" id="10_vig"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="11_hud"]
+[ext_resource type="Script" path="res://scripts/beacon.gd" id="12_beacon"]
+[ext_resource type="Script" path="res://scripts/lost_ship.gd" id="13_lost"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_paper"]
+shader = ExtResource("2_paper")
+shader_parameter/paper_color = Color(0.86, 0.82, 0.7, 1)
+shader_parameter/stain_color = Color(0.46, 0.42, 0.32, 1)
+shader_parameter/rect_size = Vector2(4376, 2072)
+shader_parameter/stain_amount = 0.75
+shader_parameter/edge_burn = 0.9
+shader_parameter/grain = 0.05
+shader_parameter/seed = 7.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vig"]
+shader = ExtResource("10_vig")
+shader_parameter/dread = 0.35
+shader_parameter/strength = 0.95
+shader_parameter/warm = Color(0.1, 0.08, 0.1, 1)
+shader_parameter/cold = Color(0.01, 0.03, 0.07, 1)
+
+[node name="Level2" type="Node2D"]
+script = ExtResource("1_level")
+
+[node name="Paper" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_paper")
+offset_left = -140.0
+offset_top = -140.0
+offset_right = 4236.0
+offset_bottom = 1932.0
+mouse_filter = 2
+
+[node name="Chart" type="Node2D" parent="."]
+script = ExtResource("3_chart")
+data_script = ExtResource("4_data")
+tents = Array[Vector2]([Vector2(111.5, 27.6), Vector2(111.2, 33.4), Vector2(113.6, 30.5)])
+
+[node name="Notes" type="Node2D" parent="."]
+
+[node name="Mainland" type="Node2D" parent="Notes"]
+position = Vector2(224, 576)
+script = ExtResource("5_note")
+text = "The Mainland"
+style = 1
+font_size = 30
+
+[node name="Harbour" type="Node2D" parent="Notes"]
+position = Vector2(288, 1072)
+rotation = -0.04
+script = ExtResource("5_note")
+text = "the last harbour —
+its lamps went out behind us"
+font_size = 20
+
+[node name="Deep" type="Node2D" parent="Notes"]
+position = Vector2(1344, 640)
+script = ExtResource("5_note")
+text = "The Open Deep"
+style = 1
+font_size = 34
+
+[node name="NoBottom" type="Node2D" parent="Notes"]
+position = Vector2(1440, 1088)
+rotation = 0.03
+script = ExtResource("5_note")
+text = "no soundings. no bottom.
+nothing to steer by but the stars"
+font_size = 20
+
+[node name="Teeth" type="Node2D" parent="Notes"]
+position = Vector2(2352, 51)
+script = ExtResource("5_note")
+text = "The Teeth"
+style = 1
+font_size = 28
+
+[node name="Maw" type="Node2D" parent="Notes"]
+position = Vector2(2160, 1043)
+script = ExtResource("5_note")
+text = "the Maw"
+style = 1
+font_size = 22
+
+[node name="MawNote" type="Node2D" parent="Notes"]
+position = Vector2(2112, 800)
+rotation = -0.05
+script = ExtResource("5_note")
+text = "the straight way is
+never the safe way"
+font_size = 20
+
+[node name="Shoals" type="Node2D" parent="Notes"]
+position = Vector2(2816, 1741)
+script = ExtResource("5_note")
+text = "The Shoals"
+style = 1
+font_size = 28
+
+[node name="Landing" type="Node2D" parent="Notes"]
+position = Vector2(3776, 320)
+script = ExtResource("5_note")
+text = "Harrow's Landing"
+style = 1
+font_size = 26
+
+[node name="Tents" type="Node2D" parent="Notes"]
+position = Vector2(3744, 1280)
+rotation = 0.03
+script = ExtResource("5_note")
+text = "three tents on the shore —
+they look like ours"
+font_size = 20
+
+[node name="Monsters" type="Node2D" parent="Notes"]
+position = Vector2(1152, 1299)
+rotation = -0.05
+script = ExtResource("5_note")
+text = "here be monsters"
+font_size = 22
+
+[node name="KnowsShip" type="Node2D" parent="Notes"]
+position = Vector2(1792, 896)
+rotation = -0.1
+script = ExtResource("5_note")
+text = "IT KNOWS YOUR SHIP"
+style = 2
+font_size = 28
+reveal_radius = 170.0
+
+[node name="Down" type="Node2D" parent="Notes"]
+position = Vector2(1664, 1408)
+rotation = 0.12
+script = ExtResource("5_note")
+text = "down, down, down"
+style = 2
+font_size = 26
+reveal_radius = 150.0
+
+[node name="Welcome" type="Node2D" parent="Notes"]
+position = Vector2(3360, 1216)
+rotation = -0.08
+script = ExtResource("5_note")
+text = "welcome home"
+style = 2
+font_size = 26
+reveal_radius = 180.0
+
+[node name="DoodleW" type="Node2D" parent="Notes"]
+position = Vector2(960, 1600)
+rotation = -0.3
+script = ExtResource("5_note")
+text = ""
+style = 4
+font_size = 26
+reveal_radius = 220.0
+
+[node name="DoodleE" type="Node2D" parent="Notes"]
+position = Vector2(1920, 160)
+rotation = 0.35
+script = ExtResource("5_note")
+text = ""
+style = 4
+font_size = 26
+reveal_radius = 220.0
+
+[node name="WayThrough" type="Node2D" parent="Notes"]
+position = Vector2(2896, 832)
+rotation = -0.04
+script = ExtResource("5_note")
+text = "a way through?"
+font_size = 20
+
+[node name="Beacons" type="Node2D" parent="."]
+
+[node name="NorthBeacon" type="Node2D" parent="Beacons"]
+position = Vector2(1994, 390)
+script = ExtResource("12_beacon")
+title = "the North Beacon"
+
+[node name="SouthBeacon" type="Node2D" parent="Beacons"]
+position = Vector2(1920, 1418)
+script = ExtResource("12_beacon")
+title = "the South Beacon"
+
+[node name="ShoalBeacon" type="Node2D" parent="Beacons"]
+position = Vector2(2675, 595)
+script = ExtResource("12_beacon")
+title = "the Shoal Beacon"
+
+[node name="LostShips" type="Node2D" parent="."]
+
+[node name="Constance" type="Node2D" parent="LostShips"]
+position = Vector2(1744, 144)
+script = ExtResource("13_lost")
+title = "the Constance"
+reward = "route"
+
+[node name="Albatross" type="Node2D" parent="LostShips"]
+position = Vector2(1296, 1520)
+script = ExtResource("13_lost")
+title = "the Albatross"
+reward = "story"
+
+[node name="Meridian" type="Node2D" parent="LostShips"]
+position = Vector2(2576, 1616)
+script = ExtResource("13_lost")
+title = "the Meridian"
+reward = "message"
+
+[node name="Route" type="Node2D" parent="."]
+script = ExtResource("6_route")
+color = Color(0.55, 0.12, 0.08, 0.55)
+
+[node name="Obstacles" type="Node2D" parent="."]
+
+[node name="MawNorth" type="Node2D" parent="Obstacles"]
+position = Vector2(2352, 880)
+script = ExtResource("7_tentacle")
+lean = -1.3
+rise_radius = 200.0
+
+[node name="MawSouth" type="Node2D" parent="Obstacles"]
+position = Vector2(2288, 912)
+script = ExtResource("7_tentacle")
+lean = 1.8
+rise_radius = 200.0
+
+[node name="TopGap" type="Node2D" parent="Obstacles"]
+position = Vector2(2320, 272)
+script = ExtResource("7_tentacle")
+lean = 0.3
+
+[node name="BottomGap" type="Node2D" parent="Obstacles"]
+position = Vector2(2256, 1520)
+script = ExtResource("7_tentacle")
+lean = -0.4
+
+[node name="EastGapN" type="Node2D" parent="Obstacles"]
+position = Vector2(3120, 496)
+script = ExtResource("7_tentacle")
+lean = 2.6
+rise_radius = 180.0
+
+[node name="EastGapS" type="Node2D" parent="Obstacles"]
+position = Vector2(3056, 1200)
+script = ExtResource("7_tentacle")
+lean = -2.4
+rise_radius = 180.0
+
+[node name="LandingN" type="Node2D" parent="Obstacles"]
+position = Vector2(3344, 752)
+script = ExtResource("7_tentacle")
+lean = 2.0
+
+[node name="LandingS" type="Node2D" parent="Obstacles"]
+position = Vector2(3344, 1200)
+script = ExtResource("7_tentacle")
+lean = -2.0
+
+[node name="Stray1" type="Node2D" parent="Obstacles"]
+position = Vector2(2704, 912)
+script = ExtResource("7_tentacle")
+lean = 1.0
+
+[node name="Stray2" type="Node2D" parent="Obstacles"]
+position = Vector2(2640, 272)
+script = ExtResource("7_tentacle")
+lean = -2.0
+
+[node name="Stray3" type="Node2D" parent="Obstacles"]
+position = Vector2(2672, 1488)
+script = ExtResource("7_tentacle")
+lean = 0.8
+
+[node name="Hunters" type="Node2D" parent="."]
+
+[node name="Ship" type="Node2D" parent="."]
+position = Vector2(560, 944)
+script = ExtResource("9_ship")
+route_path = NodePath("../Route")
+
+[node name="Camera" type="Camera2D" parent="."]
+position = Vector2(560, 944)
+zoom = Vector2(1.8, 1.8)
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="Gloom" type="ColorRect" parent="Overlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.05, 0.09, 0)
+
+[node name="Vignette" type="ColorRect" parent="Overlay"]
+material = SubResource("ShaderMaterial_vig")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HUD" parent="." instance=ExtResource("11_hud")]
+controls_hint = "WASD / arrows — steer      E / Space — fire a flare      Tab — your chart      R — restart      Esc — pause"

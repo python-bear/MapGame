@@ -1,0 +1,66 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://levels/level3/level3.gd" id="1_level"]
+[ext_resource type="Script" path="res://scripts/maze_builder.gd" id="2_maze"]
+[ext_resource type="Script" path="res://levels/level3/level3_data.gd" id="3_data"]
+[ext_resource type="Script" path="res://scripts/fps_player.gd" id="4_player"]
+[ext_resource type="Script" path="res://scripts/beast.gd" id="5_beast"]
+[ext_resource type="Script" path="res://scripts/fps_overlay.gd" id="6_overlay"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="7_hud"]
+
+[sub_resource type="Environment" id="Environment_dark"]
+background_mode = 1
+background_color = Color(0, 0, 0, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.4, 0.41, 0.47, 1)
+ambient_light_energy = 0.3
+tonemap_mode = 2
+tonemap_exposure = 1.1
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.15
+glow_hdr_threshold = 0.9
+fog_enabled = true
+fog_light_color = Color(0.015, 0.016, 0.02, 1)
+fog_density = 0.085
+fog_sky_affect = 1.0
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.35
+height = 1.75
+
+[node name="Level3" type="Node3D"]
+script = ExtResource("1_level")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_dark")
+
+[node name="Maze" type="Node3D" parent="."]
+script = ExtResource("2_maze")
+data_script = ExtResource("3_data")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+floor_snap_length = 0.3
+script = ExtResource("4_player")
+
+[node name="Collision" type="CollisionShape3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.875, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Head" type="Node3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.62, 0)
+
+[node name="Camera" type="Camera3D" parent="Player/Head"]
+current = true
+fov = 72.0
+near = 0.05
+far = 34.0
+
+[node name="Beast" type="Node3D" parent="."]
+script = ExtResource("5_beast")
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+script = ExtResource("6_overlay")
+
+[node name="HUD" parent="." instance=ExtResource("7_hud")]
+controls_hint = "WASD — walk      Shift — run      Mouse / trackpad or  ,  .  — look      E / Space — doors      Q — ink a wall      Tab — your map      R — restart      Esc — pause"

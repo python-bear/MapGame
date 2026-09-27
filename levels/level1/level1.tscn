@@ -1,0 +1,294 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://levels/level1/level1.gd" id="1_level"]
+[ext_resource type="Shader" path="res://shaders/parchment.gdshader" id="2_paper"]
+[ext_resource type="Script" path="res://scripts/map_renderer.gd" id="3_map"]
+[ext_resource type="Script" path="res://levels/level1/level1_data.gd" id="4_data"]
+[ext_resource type="Script" path="res://scripts/map_note.gd" id="5_note"]
+[ext_resource type="Script" path="res://scripts/ink_route.gd" id="6_route"]
+[ext_resource type="Script" path="res://levels/level1/goal.gd" id="7_goal"]
+[ext_resource type="Script" path="res://scripts/explorer.gd" id="8_explorer"]
+[ext_resource type="Shader" path="res://shaders/vignette.gdshader" id="9_vig"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="10_hud"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_paper"]
+shader = ExtResource("2_paper")
+shader_parameter/paper_color = Color(0.91, 0.85, 0.71, 1)
+shader_parameter/stain_color = Color(0.66, 0.52, 0.33, 1)
+shader_parameter/rect_size = Vector2(2328, 1560)
+shader_parameter/stain_amount = 0.55
+shader_parameter/edge_burn = 0.7
+shader_parameter/grain = 0.045
+shader_parameter/seed = 3.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vig"]
+shader = ExtResource("9_vig")
+shader_parameter/dread = 0.0
+shader_parameter/strength = 0.9
+shader_parameter/warm = Color(0.22, 0.12, 0.04, 1)
+shader_parameter/cold = Color(0.03, 0.05, 0.1, 1)
+
+[node name="Level1" type="Node2D"]
+script = ExtResource("1_level")
+
+[node name="Paper" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_paper")
+offset_left = -140.0
+offset_top = -140.0
+offset_right = 2188.0
+offset_bottom = 1420.0
+mouse_filter = 2
+
+[node name="Map" type="Node2D" parent="."]
+script = ExtResource("3_map")
+data_script = ExtResource("4_data")
+
+[node name="Notes" type="Node2D" parent="."]
+[node name="LookoutHill" type="Node2D" parent="Notes"]
+position = Vector2(320, 486)
+script = ExtResource("5_note")
+text = "Lookout Hill"
+style = 1
+font_size = 26
+
+[node name="RioSombra" type="Node2D" parent="Notes"]
+position = Vector2(762, 656)
+rotation = 1.35
+script = ExtResource("5_note")
+text = "Rio Sombra"
+style = 1
+font_size = 26
+
+[node name="Plateau" type="Node2D" parent="Notes"]
+position = Vector2(1552, 506)
+script = ExtResource("5_note")
+text = "The Plateau"
+style = 1
+font_size = 30
+
+[node name="BlackTarn" type="Node2D" parent="Notes"]
+position = Vector2(1328, 259)
+script = ExtResource("5_note")
+text = "Black Tarn"
+style = 1
+font_size = 22
+
+[node name="Summit" type="Node2D" parent="Notes"]
+position = Vector2(1920, 298)
+script = ExtResource("5_note")
+text = "The Summit"
+style = 1
+font_size = 24
+
+[node name="Delta" type="Node2D" parent="Notes"]
+position = Vector2(624, 1229)
+script = ExtResource("5_note")
+text = "Sombra Delta"
+style = 1
+font_size = 22
+
+[node name="GreenDeep" type="Node2D" parent="Notes"]
+position = Vector2(1408, 1104)
+script = ExtResource("5_note")
+text = "The Green Deep"
+style = 1
+font_size = 30
+
+[node name="LittleSombra" type="Node2D" parent="Notes"]
+position = Vector2(1632, 691)
+rotation = 0.12
+script = ExtResource("5_note")
+text = "Little Sombra"
+style = 1
+font_size = 20
+
+[node name="CampNote" type="Node2D" parent="Notes"]
+position = Vector2(288, 1165)
+rotation = -0.05
+script = ExtResource("5_note")
+text = "camp — night of day 2"
+font_size = 24
+
+[node name="RopeBridge" type="Node2D" parent="Notes"]
+position = Vector2(848, 333)
+rotation = 0.04
+script = ExtResource("5_note")
+text = "rope bridge — holds,
+if you don't look down"
+font_size = 22
+
+[node name="LogBridge" type="Node2D" parent="Notes"]
+position = Vector2(890, 1066)
+rotation = -0.08
+script = ExtResource("5_note")
+text = "log bridge"
+font_size = 22
+
+[node name="PortersTrail" type="Node2D" parent="Notes"]
+position = Vector2(458, 653)
+rotation = -0.06
+script = ExtResource("5_note")
+text = "porters' trail —
+quick going"
+font_size = 22
+
+[node name="JungleSlow" type="Node2D" parent="Notes"]
+position = Vector2(352, 880)
+rotation = 0.03
+script = ExtResource("5_note")
+text = "jungle thick as a wall —
+slow going"
+font_size = 22
+
+[node name="OldSteps" type="Node2D" parent="Notes"]
+position = Vector2(915, 74)
+rotation = -0.04
+script = ExtResource("5_note")
+text = "steps cut into the rock.
+old. who cut them?"
+font_size = 22
+
+[node name="Elevation" type="Node2D" parent="Notes"]
+position = Vector2(1101, 403)
+rotation = -0.3
+script = ExtResource("5_note")
+text = "elev. ~340 ft"
+font_size = 20
+
+[node name="Cliffs" type="Node2D" parent="Notes"]
+position = Vector2(1168, 682)
+rotation = 0.05
+script = ExtResource("5_note")
+text = "sheer cliffs —
+no way up here"
+font_size = 22
+
+[node name="Leeches" type="Node2D" parent="Notes"]
+position = Vector2(582, 1107)
+rotation = 0.1
+script = ExtResource("5_note")
+text = "leeches!"
+font_size = 22
+
+[node name="View" type="Node2D" parent="Notes"]
+position = Vector2(320, 368)
+rotation = -0.05
+script = ExtResource("5_note")
+text = "from the top: the plateau
+goes on forever"
+font_size = 20
+
+[node name="TarnNote" type="Node2D" parent="Notes"]
+position = Vector2(1328, 480)
+rotation = 0.03
+script = ExtResource("5_note")
+text = "water far too still.
+the guide won't go near it"
+font_size = 20
+
+[node name="WashedOut" type="Node2D" parent="Notes"]
+position = Vector2(1574, 851)
+rotation = -0.03
+script = ExtResource("5_note")
+text = "bridge washed out —
+the old trail goes nowhere"
+font_size = 20
+
+[node name="GuideStopped" type="Node2D" parent="Notes"]
+position = Vector2(1648, 45)
+script = ExtResource("5_note")
+text = "the guide stopped here and would not go on.
+he would not say why."
+font_size = 20
+
+[node name="MapEnds" type="Node2D" parent="Notes"]
+position = Vector2(1898, 211)
+rotation = -0.08
+script = ExtResource("5_note")
+text = "here my map ends"
+font_size = 22
+
+[node name="NotALake" type="Node2D" parent="Notes"]
+position = Vector2(1459, 339)
+rotation = -0.2
+script = ExtResource("5_note")
+text = "IT IS NOT A LAKE"
+style = 2
+font_size = 28
+reveal_radius = 170.0
+
+[node name="TookBridge" type="Node2D" parent="Notes"]
+position = Vector2(1338, 912)
+rotation = 0.08
+script = ExtResource("5_note")
+text = "we took the bridge down"
+style = 2
+font_size = 26
+reveal_radius = 120.0
+
+[node name="NotInvited" type="Node2D" parent="Notes"]
+position = Vector2(1674, 275)
+rotation = 0.14
+script = ExtResource("5_note")
+text = "you were not invited"
+style = 2
+font_size = 26
+reveal_radius = 150.0
+
+[node name="TurnBack" type="Node2D" parent="Notes"]
+position = Vector2(1952, 883)
+rotation = -0.12
+script = ExtResource("5_note")
+text = "turn back"
+style = 2
+font_size = 26
+reveal_radius = 120.0
+
+[node name="TarnTentacle" type="Node2D" parent="Notes"]
+position = Vector2(1226, 397)
+rotation = -0.35
+script = ExtResource("5_note")
+text = ""
+style = 3
+font_size = 24
+reveal_radius = 170.0
+
+[node name="EdgeTentacle" type="Node2D" parent="Notes"]
+position = Vector2(1997, 186)
+rotation = 0.45
+script = ExtResource("5_note")
+text = ""
+style = 3
+font_size = 24
+color_override = Color(0.2, 0.12, 0.1, 0.45)
+reveal_radius = 160.0
+
+[node name="Route" type="Node2D" parent="."]
+script = ExtResource("6_route")
+
+[node name="Goal" type="Node2D" parent="."]
+position = Vector2(1904, 144)
+script = ExtResource("7_goal")
+
+[node name="Explorer" type="Node2D" parent="."]
+position = Vector2(144, 1132)
+script = ExtResource("8_explorer")
+route_path = NodePath("../Route")
+
+[node name="Camera" type="Camera2D" parent="."]
+position = Vector2(144, 1132)
+zoom = Vector2(1.45, 1.45)
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="Vignette" type="ColorRect" parent="Overlay"]
+material = SubResource("ShaderMaterial_vig")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="HUD" parent="." instance=ExtResource("10_hud")]

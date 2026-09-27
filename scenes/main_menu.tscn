@@ -1,0 +1,202 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scenes/main_menu.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/parchment.gdshader" id="2_paper"]
+[ext_resource type="Shader" path="res://shaders/vignette.gdshader" id="3_vig"]
+[ext_resource type="FontFile" path="res://assets/fonts/IMFellEnglish-Italic.ttf" id="4_italic"]
+[ext_resource type="FontFile" path="res://assets/fonts/Caveat.ttf" id="5_hand"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_paper"]
+shader = ExtResource("2_paper")
+shader_parameter/paper_color = Color(0.91, 0.85, 0.71, 1)
+shader_parameter/stain_color = Color(0.66, 0.52, 0.33, 1)
+shader_parameter/rect_size = Vector2(1280, 720)
+shader_parameter/stain_amount = 0.7
+shader_parameter/edge_burn = 0.8
+shader_parameter/grain = 0.05
+shader_parameter/seed = 11.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vig"]
+shader = ExtResource("3_vig")
+shader_parameter/dread = 0.0
+shader_parameter/strength = 0.8
+shader_parameter/warm = Color(0.22, 0.12, 0.04, 1)
+shader_parameter/cold = Color(0.03, 0.05, 0.1, 1)
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Paper" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_paper")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Doodles" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Vignette" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_vig")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Center" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -260.0
+offset_right = 360.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Title" type="Label" parent="Center"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.11, 0.06, 1)
+theme_override_font_sizes/font_size = 76
+text = "Cartographer's Dream"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Center"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.38, 0.24, 0.14, 1)
+theme_override_fonts/font = ExtResource("4_italic")
+theme_override_font_sizes/font_size = 26
+text = "being a true & faithful survey of lands unknown"
+horizontal_alignment = 1
+
+[node name="Spacer" type="Control" parent="Center"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+
+[node name="Menu" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 4
+
+[node name="Begin" type="Button" parent="Center/Menu"]
+layout_mode = 2
+text = "Begin the Survey"
+
+[node name="Settings" type="Button" parent="Center/Menu"]
+layout_mode = 2
+text = "Settings"
+
+[node name="Quit" type="Button" parent="Center/Menu"]
+layout_mode = 2
+text = "Put Down the Pen"
+
+[node name="BestTime" type="Label" parent="Center"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.42, 0.27, 0.16, 1)
+theme_override_fonts/font = ExtResource("5_hand")
+theme_override_font_sizes/font_size = 26
+horizontal_alignment = 1
+
+[node name="SettingsPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -250.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="SettingsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Heading" type="Label" parent="SettingsPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Settings"
+horizontal_alignment = 1
+
+[node name="ShowTimer" type="CheckButton" parent="SettingsPanel/VBox"]
+layout_mode = 2
+text = "Show speedrun timer"
+
+[node name="TimerNote" type="Label" parent="SettingsPanel/VBox"]
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.27, 0.17, 1)
+theme_override_fonts/font = ExtResource("5_hand")
+theme_override_font_sizes/font_size = 22
+text = "Off by default — your first journey is best taken without a clock. The timer always runs in the background; turn this on to see it and your best times."
+autowrap_mode = 3
+
+[node name="Fullscreen" type="CheckButton" parent="SettingsPanel/VBox"]
+layout_mode = 2
+text = "Fullscreen"
+
+[node name="MusicRow" type="HBoxContainer" parent="SettingsPanel/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SettingsPanel/VBox/MusicRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+text = "Music"
+
+[node name="MusicVolume" type="HSlider" parent="SettingsPanel/VBox/MusicRow"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.8
+
+[node name="SfxRow" type="HBoxContainer" parent="SettingsPanel/VBox"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SettingsPanel/VBox/SfxRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+text = "Sound"
+
+[node name="SfxVolume" type="HSlider" parent="SettingsPanel/VBox/SfxRow"]
+custom_minimum_size = Vector2(300, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+max_value = 1.0
+step = 0.05
+value = 0.9
+
+[node name="Back" type="Button" parent="SettingsPanel/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Back"
